@@ -38,9 +38,18 @@ class GleamViewManager : ViewGroupManager<GleamView>(),
     view.delay = delay
   }
 
-  @ReactProp(name = "animateDuration", defaultFloat = 300f)
-  override fun setAnimateDuration(view: GleamView, animateDuration: Float) {
-    view.animateDuration = animateDuration
+  @ReactProp(name = "transitionDuration", defaultFloat = 300f)
+  override fun setTransitionDuration(view: GleamView, transitionDuration: Float) {
+    view.transitionDuration = transitionDuration
+  }
+
+  @ReactProp(name = "transitionType")
+  override fun setTransitionType(view: GleamView, transitionType: String?) {
+    view.transitionType = when (transitionType) {
+      "shrink" -> GleamView.TransitionType.SHRINK
+      "collapse" -> GleamView.TransitionType.COLLAPSE
+      else -> GleamView.TransitionType.FADE
+    }
   }
 
   @ReactProp(name = "intensity", defaultFloat = 1f)
@@ -65,6 +74,11 @@ class GleamViewManager : ViewGroupManager<GleamView>(),
   @ReactProp(name = "highlightColor", customType = "Color")
   override fun setHighlightColor(view: GleamView, highlightColor: Int?) {
     view.highlightColor = highlightColor ?: 0xFFF5F5F5.toInt()
+  }
+
+  override fun setBorderRadius(view: GleamView, borderRadius: Float) {
+    view.cornerRadius = borderRadius
+    super.setBorderRadius(view, borderRadius)
   }
 
   override fun needsCustomLayoutForChildren(): Boolean = false

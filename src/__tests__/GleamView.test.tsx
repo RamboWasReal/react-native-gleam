@@ -36,9 +36,9 @@ describe('default props', () => {
     expect(getNativeProps().delay).toBeUndefined();
   });
 
-  it('passes animateDuration=undefined (native default 300)', () => {
+  it('passes transitionDuration=undefined (native default 300)', () => {
     render(<GleamView testID="gleam" />);
-    expect(getNativeProps().animateDuration).toBeUndefined();
+    expect(getNativeProps().transitionDuration).toBeUndefined();
   });
 
   it('passes intensity=undefined (native default 1)', () => {
@@ -86,14 +86,14 @@ describe('explicit prop values', () => {
     expect(getNativeProps().delay).toBe(150);
   });
 
-  it('passes animateDuration value', () => {
-    render(<GleamView testID="gleam" animateDuration={800} />);
-    expect(getNativeProps().animateDuration).toBe(800);
+  it('passes transitionDuration value', () => {
+    render(<GleamView testID="gleam" transitionDuration={800} />);
+    expect(getNativeProps().transitionDuration).toBe(800);
   });
 
-  it('passes animateDuration=0 for instant transition', () => {
-    render(<GleamView testID="gleam" animateDuration={0} />);
-    expect(getNativeProps().animateDuration).toBe(0);
+  it('passes transitionDuration=0 for instant transition', () => {
+    render(<GleamView testID="gleam" transitionDuration={0} />);
+    expect(getNativeProps().transitionDuration).toBe(0);
   });
 
   it('passes intensity value', () => {
@@ -256,7 +256,7 @@ describe('combined props', () => {
         speed={800}
         direction="rtl"
         delay={200}
-        animateDuration={500}
+        transitionDuration={500}
         intensity={0.7}
         baseColor="#D4E6F1"
         highlightColor="#EBF5FB"
@@ -271,7 +271,7 @@ describe('combined props', () => {
     expect(props.speed).toBe(800);
     expect(props.direction).toBe('rtl');
     expect(props.delay).toBe(200);
-    expect(props.animateDuration).toBe(500);
+    expect(props.transitionDuration).toBe(500);
     expect(props.intensity).toBe(0.7);
     expect(props.baseColor).toBe('#D4E6F1');
     expect(props.highlightColor).toBe('#EBF5FB');
@@ -287,7 +287,7 @@ describe('combined props', () => {
         speed={1500}
         direction={GleamDirection.TopToBottom}
         delay={300}
-        animateDuration={0}
+        transitionDuration={0}
         intensity={0.5}
         baseColor="#000000"
         highlightColor="#FFFFFF"
@@ -298,7 +298,7 @@ describe('combined props', () => {
     expect(props.speed).toBe(1500);
     expect(props.direction).toBe('ttb');
     expect(props.delay).toBe(300);
-    expect(props.animateDuration).toBe(0);
+    expect(props.transitionDuration).toBe(0);
     expect(props.intensity).toBe(0.5);
   });
 

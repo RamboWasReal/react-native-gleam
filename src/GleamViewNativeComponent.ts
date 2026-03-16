@@ -10,7 +10,11 @@ export interface NativeProps extends ViewProps {
   speed?: CodegenTypes.WithDefault<CodegenTypes.Float, 1000>;
   direction?: CodegenTypes.WithDefault<'ltr' | 'rtl' | 'ttb', 'ltr'>;
   delay?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
-  animateDuration?: CodegenTypes.WithDefault<CodegenTypes.Float, 300>;
+  transitionDuration?: CodegenTypes.WithDefault<CodegenTypes.Float, 300>;
+  transitionType?: CodegenTypes.WithDefault<
+    'fade' | 'shrink' | 'collapse',
+    'fade'
+  >;
   intensity?: CodegenTypes.WithDefault<CodegenTypes.Float, 1>;
   baseColor?: ColorValue;
   highlightColor?: ColorValue;

@@ -6,3 +6,9 @@ export enum GleamDirection {
   RightToLeft = 'rtl',
   TopToBottom = 'ttb',
 }
+
+export enum GleamTransition {
+  Fade = 'fade',
+  Shrink = 'shrink',
+  Collapse = 'collapse',
+}

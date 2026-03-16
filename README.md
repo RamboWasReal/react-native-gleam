@@ -2,8 +2,8 @@
 
 Native-powered shimmer loading effect for React Native. Built with pure native animations — no reanimated, no SVG, zero dependencies.
 
-- **iOS**: `CAGradientLayer` + `CABasicAnimation`
-- **Android**: `ValueAnimator` + `LinearGradient`
+- **iOS**: `CAGradientLayer` + `CADisplayLink`
+- **Android**: `Choreographer` + `LinearGradient`
 - **Fabric only** (New Architecture)
 
 ## Installation
@@ -34,7 +34,7 @@ No config plugin needed — autolinking and codegen handle everything.
 ## Usage
 
 ```tsx
-import { GleamView, GleamDirection } from 'react-native-gleam';
+import { GleamView, GleamDirection, GleamTransition } from 'react-native-gleam';
 
 function UserCard({ loading, user }) {
   return (
@@ -66,7 +66,8 @@ When `loading={true}`, children are hidden and a shimmer animation plays. When `
   speed={800}
   direction={GleamDirection.LeftToRight}
   delay={0}
-  animateDuration={300}
+  transitionDuration={300}
+  transitionType={GleamTransition.Fade}
   intensity={0.7}
   baseColor="#E0E0E0"
   highlightColor="#F5F5F5"
@@ -87,7 +88,8 @@ When `loading={true}`, children are hidden and a shimmer animation plays. When `
 | `speed` | `number` | `1000` | Duration of one shimmer cycle (ms) |
 | `direction` | `GleamDirection` | `LeftToRight` | Animation direction |
 | `delay` | `number` | `0` | Delay before animation starts (ms) — useful for stagger |
-| `animateDuration` | `number` | `300` | Fade duration when transitioning loading to content (ms). `0` = instant |
+| `transitionDuration` | `number` | `300` | Duration of the transition from shimmer to content (ms). `0` = instant |
+| `transitionType` | `GleamTransition` | `Fade` | Transition style when loading ends |
 | `intensity` | `number` | `1` | Highlight strength (0-1). Lower = more subtle shimmer |
 | `baseColor` | `string` | `#E0E0E0` | Background color of the shimmer |
 | `highlightColor` | `string` | `#F5F5F5` | Color of the moving highlight |
@@ -103,6 +105,16 @@ import { GleamDirection } from 'react-native-gleam';
 GleamDirection.LeftToRight  // 'ltr' (default)
 GleamDirection.RightToLeft  // 'rtl'
 GleamDirection.TopToBottom  // 'ttb'
+```
+
+### GleamTransition
+
+```tsx
+import { GleamTransition } from 'react-native-gleam';
+
+GleamTransition.Fade      // 'fade' (default) — opacity crossfade
+GleamTransition.Shrink    // 'shrink' — shimmer scales down while fading
+GleamTransition.Collapse  // 'collapse' — shimmer collapses vertically then horizontally
 ```
 
 ## Requirements
@@ -123,9 +135,11 @@ This library requires the New Architecture (Fabric). It does not support the old
 
 When `loading` switches to `false`:
 
-1. The shimmer fades out over `animateDuration` ms
+1. The shimmer transitions out over `transitionDuration` ms (style depends on `transitionType`)
 2. Children fade in simultaneously
 3. `onTransitionEnd` fires when complete
+
+All shimmer instances sharing the same `speed` are automatically synchronized via a shared clock.
 
 The shimmer respects `borderRadius` and all standard view styles.
 

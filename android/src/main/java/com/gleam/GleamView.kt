@@ -6,19 +6,26 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
 import android.graphics.Shader
-import android.view.animation.AccelerateDecelerateInterpolator
+import android.os.SystemClock
+import android.view.Choreographer
 import android.view.animation.DecelerateInterpolator
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactContext
 import com.facebook.react.bridge.WritableMap
+import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.uimanager.UIManagerHelper
 import com.facebook.react.uimanager.events.Event
 import com.facebook.react.views.view.ReactViewGroup
+import kotlin.math.cos
+import kotlin.math.PI
 
 class GleamView(context: Context) : ReactViewGroup(context) {
 
     enum class Direction { LTR, RTL, TTB }
+    enum class TransitionType { FADE, SHRINK, COLLAPSE }
 
     var loading: Boolean = true
         set(value) {
@@ -33,9 +40,6 @@ class GleamView(context: Context) : ReactViewGroup(context) {
         set(value) {
             if (field != value) {
                 field = value
-                if (loading) {
-                    startAnimation()
-                }
             }
         }
 
@@ -43,9 +47,6 @@ class GleamView(context: Context) : ReactViewGroup(context) {
         set(value) {
             if (field != value) {
                 field = value
-                if (loading) {
-                    startAnimation()
-                }
             }
         }
 
@@ -53,13 +54,17 @@ class GleamView(context: Context) : ReactViewGroup(context) {
         set(value) {
             if (field != value) {
                 field = value
-                if (loading) {
-                    startAnimation()
-                }
             }
         }
 
-    var animateDuration: Float = 300f
+    var transitionDuration: Float = 300f
+        set(value) {
+            if (field != value) {
+                field = value
+            }
+        }
+
+    var transitionType: TransitionType = TransitionType.FADE
         set(value) {
             if (field != value) {
                 field = value
@@ -94,12 +99,15 @@ class GleamView(context: Context) : ReactViewGroup(context) {
     private val gradientColors = IntArray(3)
     private val gradientPositions = floatArrayOf(0f, 0.5f, 1f)
     private val gradientCoords = FloatArray(4)
-    private var shimmerAnimator: ValueAnimator? = null
+    private val clipPath = Path()
+    private val clipRect = RectF()
+    internal var cornerRadius: Float = 0f
     private var transitionAnimator: ValueAnimator? = null
-    private var animationProgress: Float = 0f
     private var shimmerOpacity: Float = 1f
     private var contentOpacity: Float = 0f
     private var isTransitioning: Boolean = false
+    private var transitionProgress: Float = 0f
+    private var isRegistered: Boolean = false
 
     init {
         setWillNotDraw(false)
@@ -108,22 +116,54 @@ class GleamView(context: Context) : ReactViewGroup(context) {
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         if (loading) {
-            startAnimation()
+            registerClock()
         }
     }
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        stopAnimation()
+        unregisterClock()
         transitionAnimator?.cancel()
         transitionAnimator = null
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        if (loading && w > 0 && h > 0) {
-            startAnimation()
+        if (loading && w > 0 && h > 0 && !isRegistered) {
+            registerClock()
         }
+    }
+
+    private fun registerClock() {
+        if (!isRegistered) {
+            isRegistered = true
+            SharedClock.register(this)
+        }
+    }
+
+    private fun unregisterClock() {
+        if (isRegistered) {
+            isRegistered = false
+            SharedClock.unregister(this)
+        }
+    }
+
+    /** Called by SharedClock every frame */
+    fun onFrame() {
+        invalidate()
+    }
+
+    /**
+     * Compute progress from global time.
+     * Uses cosine easing: progress = (1 - cos(phase)) / 2
+     * This matches AccelerateDecelerateInterpolator and ensures smooth looping.
+     */
+    private fun computeProgress(): Float {
+        val timeMs = SystemClock.uptimeMillis().toFloat()
+        val effectiveTime = (timeMs - delay).coerceAtLeast(0f)
+        val rawProgress = (effectiveTime % speed) / speed
+        // AccelerateDecelerateInterpolator equivalent: (cos((x + 1) * PI) / 2) + 0.5
+        return ((cos((rawProgress + 1.0) * PI) / 2.0) + 0.5).toFloat()
     }
 
     override fun dispatchDraw(canvas: Canvas) {
@@ -144,6 +184,8 @@ class GleamView(context: Context) : ReactViewGroup(context) {
 
         // Draw shimmer overlay
         if ((loading || isTransitioning) && shimmerOpacity > 0f) {
+            val animationProgress = computeProgress()
+
             val effectiveHighlight = if (intensity < 1f) {
                 blendColor(baseColor, highlightColor, intensity)
             } else {
@@ -182,7 +224,44 @@ class GleamView(context: Context) : ReactViewGroup(context) {
                 Shader.TileMode.CLAMP
             )
             shimmerPaint.alpha = (shimmerOpacity * 255).toInt()
-            canvas.drawRect(0f, 0f, w, h, shimmerPaint)
+
+            // Shrink: scale down, fade starts at 30%
+            if (isTransitioning && transitionType == TransitionType.SHRINK) {
+                val scale = 1f - transitionProgress * 0.5f
+                val shrinkOpacity = (1f - transitionProgress * 2.5f).coerceAtLeast(0f)
+                shimmerPaint.alpha = (shrinkOpacity * 255).toInt()
+                canvas.save()
+                canvas.scale(scale, scale, w / 2f, h / 2f)
+            }
+
+            // Collapse: vertically then horizontally, with opacity fade
+            if (isTransitioning && transitionType == TransitionType.COLLAPSE) {
+                val p = transitionProgress
+                val scaleY = if (p < 0.6f) 1f - (p / 0.6f) * 0.98f else 0.02f
+                val scaleX = if (p < 0.6f) 1f else 1f - ((p - 0.6f) / 0.4f)
+                val collapseOpacity = (1f - p * 2.5f).coerceAtLeast(0f)
+                shimmerPaint.alpha = (collapseOpacity * 255).toInt()
+                canvas.save()
+                canvas.scale(scaleX, scaleY, w / 2f, h / 2f)
+            }
+
+            if (cornerRadius > 0f) {
+                val r = PixelUtil.toPixelFromDIP(cornerRadius)
+                val count = canvas.save()
+                clipPath.reset()
+                clipRect.set(0f, 0f, w, h)
+                clipPath.addRoundRect(clipRect, r, r, Path.Direction.CW)
+                canvas.clipPath(clipPath)
+                canvas.drawRect(0f, 0f, w, h, shimmerPaint)
+                canvas.restoreToCount(count)
+            } else {
+                canvas.drawRect(0f, 0f, w, h, shimmerPaint)
+            }
+
+            // Restore scale/CRT transform
+            if (isTransitioning && (transitionType == TransitionType.SHRINK || transitionType == TransitionType.COLLAPSE)) {
+                canvas.restore()
+            }
         }
     }
 
@@ -201,35 +280,32 @@ class GleamView(context: Context) : ReactViewGroup(context) {
             isTransitioning = false
             contentOpacity = 0f
             shimmerOpacity = 1f
-            startAnimation()
+            registerClock()
             invalidate()
         } else {
-            if (wasLoading && animateDuration > 0f) {
+            if (wasLoading && transitionDuration > 0f) {
                 isTransitioning = true
                 transitionAnimator?.cancel()
+
                 transitionAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-                    duration = animateDuration.toLong()
+                    duration = transitionDuration.toLong()
                     interpolator = DecelerateInterpolator()
-                    addUpdateListener { animation ->
-                        val progress = animation.animatedValue as Float
-                        contentOpacity = progress
-                        shimmerOpacity = 1f - progress
+                    addUpdateListener { anim ->
+                        val p = anim.animatedValue as Float
+                        transitionProgress = p
+                        contentOpacity = p
+                        shimmerOpacity = 1f - p
                         invalidate()
                     }
                     addListener(object : android.animation.AnimatorListenerAdapter() {
                         override fun onAnimationEnd(animation: android.animation.Animator) {
-                            isTransitioning = false
-                            stopAnimation()
-                            contentOpacity = 1f
-                            shimmerOpacity = 0f
-                            invalidate()
-                            emitTransitionEnd(true)
+                            finishTransition()
                         }
                     })
                     start()
                 }
             } else {
-                stopAnimation()
+                unregisterClock()
                 contentOpacity = 1f
                 shimmerOpacity = 0f
                 invalidate()
@@ -238,36 +314,20 @@ class GleamView(context: Context) : ReactViewGroup(context) {
         }
     }
 
+    private fun finishTransition() {
+        isTransitioning = false
+        unregisterClock()
+        contentOpacity = 1f
+        shimmerOpacity = 0f
+        invalidate()
+        emitTransitionEnd(true)
+    }
+
     private fun emitTransitionEnd(finished: Boolean) {
         val reactContext = context as? ReactContext ?: return
         val dispatcher = UIManagerHelper.getEventDispatcherForReactTag(reactContext, id) ?: return
         val surfaceId = UIManagerHelper.getSurfaceId(this)
         dispatcher.dispatchEvent(TransitionEndEvent(surfaceId, id, finished))
-    }
-
-    private fun startAnimation() {
-        stopAnimation()
-
-        val size = if (direction == Direction.TTB) height else width
-        if (size <= 0) return
-
-        shimmerAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = speed.toLong()
-            repeatCount = ValueAnimator.INFINITE
-            interpolator = AccelerateDecelerateInterpolator()
-            startDelay = delay.toLong()
-            addUpdateListener { animation ->
-                animationProgress = animation.animatedValue as Float
-                invalidate()
-            }
-            start()
-        }
-    }
-
-    private fun stopAnimation() {
-        shimmerAnimator?.cancel()
-        shimmerAnimator = null
-        animationProgress = 0f
     }
 
     class TransitionEndEvent(
@@ -280,6 +340,39 @@ class GleamView(context: Context) : ReactViewGroup(context) {
             return Arguments.createMap().apply {
                 putBoolean("finished", finished)
             }
+        }
+    }
+
+    /**
+     * Shared Choreographer-based clock that drives all GleamView instances.
+     * Views with the same speed/delay are automatically in sync because
+     * they compute progress from the same global timestamp.
+     */
+    companion object SharedClock {
+        private val views = mutableSetOf<GleamView>()
+        private var frameCallback: Choreographer.FrameCallback? = null
+
+        fun register(view: GleamView) {
+            views.add(view)
+            if (views.size == 1) start()
+        }
+
+        fun unregister(view: GleamView) {
+            views.remove(view)
+            if (views.isEmpty()) stop()
+        }
+
+        private fun start() {
+            frameCallback = Choreographer.FrameCallback { _ ->
+                views.forEach { it.onFrame() }
+                frameCallback?.let { Choreographer.getInstance().postFrameCallback(it) }
+            }
+            Choreographer.getInstance().postFrameCallback(frameCallback!!)
+        }
+
+        private fun stop() {
+            frameCallback?.let { Choreographer.getInstance().removeFrameCallback(it) }
+            frameCallback = null
         }
     }
 }
