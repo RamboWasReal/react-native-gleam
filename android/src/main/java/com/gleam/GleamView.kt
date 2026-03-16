@@ -125,6 +125,7 @@ class GleamView(context: Context) : ReactViewGroup(context) {
         unregisterClock()
         transitionAnimator?.cancel()
         transitionAnimator = null
+        isTransitioning = false
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -364,7 +365,7 @@ class GleamView(context: Context) : ReactViewGroup(context) {
 
         private fun start() {
             frameCallback = Choreographer.FrameCallback { _ ->
-                views.forEach { it.onFrame() }
+                views.toList().forEach { it.onFrame() }
                 frameCallback?.let { Choreographer.getInstance().postFrameCallback(it) }
             }
             Choreographer.getInstance().postFrameCallback(frameCallback!!)

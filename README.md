@@ -6,6 +6,8 @@ Native-powered shimmer loading effect for React Native. Built with pure native a
 - **Android**: `Choreographer` + `LinearGradient`
 - **Fabric only** (New Architecture)
 
+https://github.com/user-attachments/assets/70eb886c-f3e2-4611-8ecc-0b03227267d0
+
 ## Installation
 
 ```sh

@@ -113,6 +113,7 @@ static void _unregisterView(GleamView *view) {
 
         _contentView = [[UIView alloc] init];
         _contentView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        _contentView.alpha = 0.0;
 
         _shimmerLayer = [CAGradientLayer layer];
         // Disable implicit animations on the gradient layer
@@ -145,7 +146,13 @@ static void _unregisterView(GleamView *view) {
 - (void)removeFromSuperview
 {
     [self _unregisterClock];
+    _shimmerLayer.mask = nil;
     [super removeFromSuperview];
+}
+
+- (void)dealloc
+{
+    [self _unregisterClock];
 }
 
 - (void)_registerClock
