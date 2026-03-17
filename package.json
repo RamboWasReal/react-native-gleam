@@ -1,6 +1,6 @@
 {
   "name": "react-native-gleam",
-  "version": "1.0.0-beta.3",
+  "version": "1.0.0-beta.4",
   "description": "Native-powered shimmer loading effect for React Native",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
@@ -56,14 +56,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AppAndFlow/react-native-gleam.git"
+    "url": "git+https://github.com/RamboWasReal/react-native-gleam.git"
   },
-  "author": "David Boutin <david@appandflow.com> (https://github.com/AppAndFlow)",
+  "author": "David Boutin <david@appandflow.com> (https://github.com/RamboWasReal)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/AppAndFlow/react-native-gleam/issues"
+    "url": "https://github.com/RamboWasReal/react-native-gleam/issues"
   },
-  "homepage": "https://github.com/AppAndFlow/react-native-gleam#readme",
+  "homepage": "https://github.com/RamboWasReal/react-native-gleam#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
