@@ -20,7 +20,8 @@ export enum GleamTransition {
 }
 
 // Shimmer-specific prop keys to exclude when rendering as a plain View container.
-const SHIMMER_KEYS: ReadonlySet<string> = new Set([
+// Typed against NativeProps so a missing key triggers a compile error.
+const SHIMMER_KEY_LIST = [
   'loading',
   'speed',
   'direction',
@@ -32,7 +33,9 @@ const SHIMMER_KEYS: ReadonlySet<string> = new Set([
   'highlightColor',
   'onTransitionEnd',
   'children',
-]);
+] as const satisfies ReadonlyArray<keyof NativeProps | 'children'>;
+
+const SHIMMER_KEYS: ReadonlySet<string> = new Set(SHIMMER_KEY_LIST);
 
 function pickViewProps(props: NativeProps) {
   const viewProps: Record<string, unknown> = {};
