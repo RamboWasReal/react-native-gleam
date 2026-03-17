@@ -494,6 +494,9 @@ static void _unregisterView(GleamView *view) {
 - (void)_applyLoadingState
 {
     if (_loading) {
+        if (_isTransitioning) {
+            [self _emitTransitionEnd:NO];
+        }
         _isTransitioning = NO;
         _contentAlpha = 0.0;
         _lastSetChildrenAlpha = -1.0;
