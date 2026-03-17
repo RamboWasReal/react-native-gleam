@@ -12,6 +12,7 @@ import android.graphics.Shader
 import android.os.SystemClock
 import android.view.Choreographer
 import android.view.animation.DecelerateInterpolator
+import androidx.annotation.UiThread
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactContext
 import com.facebook.react.bridge.WritableMap
@@ -412,9 +413,9 @@ class GleamView(context: Context) : ReactViewGroup(context) {
      */
     companion object SharedClock {
         private val views = mutableListOf<GleamView>()
-        private val iterationSnapshot = mutableListOf<GleamView>()
         private var frameCallback: Choreographer.FrameCallback? = null
 
+        @UiThread
         fun register(view: GleamView) {
             if (!views.contains(view)) {
                 views.add(view)
@@ -422,6 +423,7 @@ class GleamView(context: Context) : ReactViewGroup(context) {
             if (views.size == 1) start()
         }
 
+        @UiThread
         fun unregister(view: GleamView) {
             views.remove(view)
             if (views.isEmpty()) stop()
@@ -430,9 +432,10 @@ class GleamView(context: Context) : ReactViewGroup(context) {
         private fun start() {
             frameCallback = Choreographer.FrameCallback { frameTimeNanos ->
                 val timeMs = frameTimeNanos / 1_000_000f
-                iterationSnapshot.clear()
-                iterationSnapshot.addAll(views)
-                iterationSnapshot.forEach { it.onFrame(timeMs) }
+                // Reverse index iteration — safe if onFrame triggers unregister (shrinks tail)
+                for (i in views.indices.reversed()) {
+                    views[i].onFrame(timeMs)
+                }
                 frameCallback?.let { Choreographer.getInstance().postFrameCallback(it) }
             }
             Choreographer.getInstance().postFrameCallback(frameCallback!!)

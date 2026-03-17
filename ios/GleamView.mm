@@ -223,6 +223,12 @@ static void _unregisterView(GleamView *view) {
     _didInitialSetup = NO;
 }
 
+// Invariant: a registered view (_isRegistered=YES) is held by the static
+// __strong _views array, which prevents ARC dealloc while registered.
+// Off-main dealloc with _isRegistered=YES should therefore be unreachable.
+// If the invariant is violated in release, we skip _unregisterView to avoid
+// racing on the statics (_views, _viewCount, _displayLink) that are read/written
+// by the display link on the main thread. The view leaks in _views but no crash.
 - (void)dealloc
 {
     if (_isRegistered) {
@@ -230,9 +236,7 @@ static void _unregisterView(GleamView *view) {
         if ([NSThread isMainThread]) {
             _unregisterView(self);
         } else {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                _stopDisplayLinkIfNeeded();
-            });
+            NSAssert(NO, @"GleamView deallocated off main thread — static __strong array should prevent this");
         }
     }
 }

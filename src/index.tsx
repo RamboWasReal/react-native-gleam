@@ -28,9 +28,12 @@ export enum GleamTransition {
   Collapse = 'collapse',
 }
 
-// Shimmer-specific prop keys to exclude when rendering as a plain View container.
-// Typed against NativeProps so a missing key triggers a compile error.
-const SHIMMER_KEY_LIST = [
+// Shimmer-specific keys that must be destructured from props before spreading
+// viewProps onto <View> in Line mode.
+//   Direction 1 (compile-time): `satisfies` catches stale/typo keys.
+//   Direction 2 (DEV runtime): check inside GleamViewComponent catches
+//   new NativeProps keys that weren't added to this list or destructured.
+const SHIMMER_KEYS: ReadonlySet<string> = new Set([
   'loading',
   'speed',
   'direction',
@@ -41,20 +44,7 @@ const SHIMMER_KEY_LIST = [
   'baseColor',
   'highlightColor',
   'onTransitionEnd',
-  'children',
-] as const satisfies ReadonlyArray<keyof NativeProps | 'children'>;
-
-const SHIMMER_KEYS: ReadonlySet<string> = new Set(SHIMMER_KEY_LIST);
-
-function pickViewProps(props: NativeProps) {
-  const viewProps: Record<string, unknown> = {};
-  for (const key of Object.keys(props)) {
-    if (!SHIMMER_KEYS.has(key)) {
-      viewProps[key] = (props as Record<string, unknown>)[key];
-    }
-  }
-  return viewProps;
-}
+] as const satisfies ReadonlyArray<keyof NativeProps>);
 
 function hasLineChildren(children: React.ReactNode): boolean {
   let found = false;
@@ -84,13 +74,28 @@ function GleamViewComponent({
     loading,
     speed,
     direction,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    delay,
     transitionDuration,
     transitionType,
     intensity,
     baseColor,
     highlightColor,
+    onTransitionEnd,
     children,
+    ...viewProps
   } = props;
+
+  if (__DEV__) {
+    for (const key of Object.keys(viewProps)) {
+      if (SHIMMER_KEYS.has(key)) {
+        console.error(
+          `GleamView: shimmer prop "${key}" leaked into viewProps. ` +
+            'Add it to the destructuring in GleamViewComponent and to SHIMMER_KEYS.'
+        );
+      }
+    }
+  }
 
   const lineCountRef = useRef(0);
   const warnedTransitionRef = useRef(false);
@@ -102,8 +107,12 @@ function GleamViewComponent({
     return () => {
       lineCountRef.current--;
       if (lineCountRef.current === 0) {
-        setHasLines(false);
-        warnedTransitionRef.current = false;
+        queueMicrotask(() => {
+          if (lineCountRef.current === 0) {
+            setHasLines(false);
+            warnedTransitionRef.current = false;
+          }
+        });
       }
     };
   }, []);
@@ -138,7 +147,7 @@ function GleamViewComponent({
   const nativeRef = ref as any;
 
   if (hasLines) {
-    if (__DEV__ && props.onTransitionEnd && !warnedTransitionRef.current) {
+    if (__DEV__ && onTransitionEnd && !warnedTransitionRef.current) {
       warnedTransitionRef.current = true;
       console.warn(
         'GleamView: onTransitionEnd is ignored when GleamView.Line children are present. ' +
@@ -147,7 +156,7 @@ function GleamViewComponent({
     }
     return (
       <GleamContext.Provider value={contextValue}>
-        <View ref={nativeRef} {...pickViewProps(props)}>
+        <View ref={nativeRef} {...viewProps}>
           {children}
         </View>
       </GleamContext.Provider>

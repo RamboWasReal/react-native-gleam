@@ -1,5 +1,6 @@
+import React from 'react';
 import { Text, View } from 'react-native';
-import { render, screen } from '@testing-library/react-native';
+import { act, render, screen } from '@testing-library/react-native';
 import { GleamView, GleamDirection, GleamTransition } from '../index';
 
 /**
@@ -577,7 +578,7 @@ describe('GleamView.Line', () => {
     expect(screen.getByTestId('line').props.loading).toBe(true);
   });
 
-  it('reverts to native GleamView when all Lines unmount', () => {
+  it('reverts to native GleamView when all Lines unmount', async () => {
     const { rerender } = render(
       <GleamView testID="parent" loading={true}>
         <GleamView.Line testID="line">
@@ -589,12 +590,47 @@ describe('GleamView.Line', () => {
     expect(screen.getByTestId('parent').props.loading).toBeUndefined();
 
     // Re-render without Lines → parent should be native GleamView again
-    rerender(
+    // Flush queueMicrotask used by registerLine cleanup
+    await act(async () => {
+      rerender(
+        <GleamView testID="parent" loading={true}>
+          <Text>No lines</Text>
+        </GleamView>
+      );
+    });
+    expect(screen.getByTestId('parent').props.loading).toBe(true);
+  });
+
+  it('stays in Line mode when one Line is swapped for another in the same batch', async () => {
+    // Regression test for the queueMicrotask fix: when an old Line unmounts
+    // and a new Line mounts in the same React commit, the cleanup of the old
+    // Line should NOT flip hasLines to false before the new Line registers.
+    const { rerender } = render(
       <GleamView testID="parent" loading={true}>
-        <Text>No lines</Text>
+        <GleamView.Line key="a" testID="lineA">
+          <Text>A</Text>
+        </GleamView.Line>
       </GleamView>
     );
-    expect(screen.getByTestId('parent').props.loading).toBe(true);
+    expect(screen.getByTestId('parent').props.loading).toBeUndefined();
+
+    // Swap Line A for Line B in a single rerender (same batch).
+    // Without queueMicrotask, Line A's cleanup would setHasLines(false)
+    // before Line B's useLayoutEffect calls registerLine.
+    await act(async () => {
+      rerender(
+        <GleamView testID="parent" loading={true}>
+          <GleamView.Line key="b" testID="lineB">
+            <Text>B</Text>
+          </GleamView.Line>
+        </GleamView>
+      );
+    });
+
+    // Parent must still be in Line mode (plain View, no loading prop)
+    expect(screen.getByTestId('parent').props.loading).toBeUndefined();
+    // New Line is present
+    expect(screen.getByTestId('lineB')).toBeTruthy();
   });
 
   it('staggered lines with individual delays', () => {
@@ -664,7 +700,7 @@ describe('GleamView.Line state transitions', () => {
     expect(screen.getByTestId('line').props.loading).toBe(true);
   });
 
-  it('stays in Line mode until all Lines are removed', () => {
+  it('stays in Line mode until all Lines are removed', async () => {
     const { rerender } = render(
       <GleamView testID="parent" loading={true}>
         <GleamView.Line testID="line1">
@@ -678,21 +714,25 @@ describe('GleamView.Line state transitions', () => {
     expect(screen.getByTestId('parent').props.loading).toBeUndefined();
 
     // Remove one Line — should still be in Line mode
-    rerender(
-      <GleamView testID="parent" loading={true}>
-        <GleamView.Line testID="line1">
-          <Text>A</Text>
-        </GleamView.Line>
-      </GleamView>
-    );
+    await act(async () => {
+      rerender(
+        <GleamView testID="parent" loading={true}>
+          <GleamView.Line testID="line1">
+            <Text>A</Text>
+          </GleamView.Line>
+        </GleamView>
+      );
+    });
     expect(screen.getByTestId('parent').props.loading).toBeUndefined();
 
     // Remove last Line — should revert to native
-    rerender(
-      <GleamView testID="parent" loading={true}>
-        <Text>No lines</Text>
-      </GleamView>
-    );
+    await act(async () => {
+      rerender(
+        <GleamView testID="parent" loading={true}>
+          <Text>No lines</Text>
+        </GleamView>
+      );
+    });
     expect(screen.getByTestId('parent').props.loading).toBe(true);
   });
 });
@@ -839,7 +879,7 @@ describe('GleamView.Line composition', () => {
     spy.mockRestore();
   });
 
-  it('re-warns after Lines removed and re-added', () => {
+  it('re-warns after Lines removed and re-added', async () => {
     const spy = jest.spyOn(console, 'warn').mockImplementation();
     const handler = jest.fn();
     const { rerender } = render(
@@ -854,12 +894,14 @@ describe('GleamView.Line composition', () => {
     ).length;
     expect(initialCalls).toBeGreaterThanOrEqual(1);
 
-    // Remove Lines → reset warning ref
-    rerender(
-      <GleamView loading={true} onTransitionEnd={handler}>
-        <Text>No lines</Text>
-      </GleamView>
-    );
+    // Remove Lines → reset warning ref (flush queueMicrotask)
+    await act(async () => {
+      rerender(
+        <GleamView loading={true} onTransitionEnd={handler}>
+          <Text>No lines</Text>
+        </GleamView>
+      );
+    });
     spy.mockClear();
 
     // Re-add Lines → should warn again (ref was reset)
@@ -915,6 +957,80 @@ describe('GleamView.Line composition', () => {
     // View props preserved
     expect(parent.props.testID).toBe('parent');
     expect(parent.props.style).toEqual(expect.objectContaining({ width: 100 }));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GleamView.Line — ref stability
+// ---------------------------------------------------------------------------
+describe('GleamView.Line ref stability', () => {
+  it('ref is stable on first render with direct Line children', () => {
+    const refCalls: unknown[] = [];
+    const refFn = (node: unknown) => {
+      refCalls.push(node);
+    };
+
+    render(
+      <GleamView ref={refFn} loading={true}>
+        <GleamView.Line>
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+
+    // hasLineChildren detects Lines synchronously → renders as View from the start.
+    // Ref receives exactly one non-null mount call (no NativeGleamView→View flip).
+    const mountCalls = refCalls.filter((n) => n !== null);
+    expect(mountCalls).toHaveLength(1);
+  });
+
+  it('ref is stable on first render with Fragment-wrapped Line children', () => {
+    const refCalls: unknown[] = [];
+    const refFn = (node: unknown) => {
+      refCalls.push(node);
+    };
+
+    render(
+      <GleamView ref={refFn} loading={true}>
+        <>
+          <GleamView.Line>
+            <Text>Content</Text>
+          </GleamView.Line>
+        </>
+      </GleamView>
+    );
+
+    // hasLineChildren traverses Fragments → still detected synchronously.
+    const mountCalls = refCalls.filter((n) => n !== null);
+    expect(mountCalls).toHaveLength(1);
+  });
+
+  it('ref re-fires when Lines are inside an intermediate wrapper', () => {
+    function Wrapper({ children }: { children: React.ReactNode }) {
+      return <>{children}</>;
+    }
+
+    const refCalls: unknown[] = [];
+    const refFn = (node: unknown) => {
+      refCalls.push(node);
+    };
+
+    render(
+      <GleamView ref={refFn} loading={true}>
+        <Wrapper>
+          <GleamView.Line>
+            <Text>Content</Text>
+          </GleamView.Line>
+        </Wrapper>
+      </GleamView>
+    );
+
+    // Wrapper is not a Fragment, so hasLineChildren can't detect Lines
+    // synchronously. First render is NativeGleamView, then useLayoutEffect
+    // registers the Line and flips to View → ref receives two instances.
+    // This is a known limitation documented here.
+    const mountCalls = refCalls.filter((n) => n !== null);
+    expect(mountCalls).toHaveLength(2);
   });
 });
 
