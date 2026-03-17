@@ -4,7 +4,7 @@ PODS:
   - fast_float (8.0.0)
   - FBLazyVector (0.83.0)
   - fmt (11.0.2)
-  - Gleam (0.1.0):
+  - Gleam (1.0.0-beta.1):
     - boost
     - DoubleConversion
     - fast_float
@@ -2731,7 +2731,7 @@ SPEC CHECKSUMS:
   fast_float: b32c788ed9c6a8c584d114d0047beda9664e7cc6
   FBLazyVector: a293a88992c4c33f0aee184acab0b64a08ff9458
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
-  Gleam: 0637a87090a3b4294c400e73ec767e957bd7a930
+  Gleam: 4b6ae92cf510666cfc83d3084405d5dab10c467f
   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
   hermes-engine: 4866cb71482c9dc07018a33a7372b47cd836fd7e
   RCT-Folly: 59ec0ac1f2f39672a0c6e6cecdd39383b764646f

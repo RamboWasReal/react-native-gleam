@@ -55,7 +55,6 @@ static void _unregisterView(GleamView *view) {
 #pragma mark - GleamView
 
 @implementation GleamView {
-    UIView *_contentView;
     CAGradientLayer *_shimmerLayer;
     BOOL _loading;
     BOOL _wasLoading;
@@ -111,10 +110,6 @@ static void _unregisterView(GleamView *view) {
         _shimmerOpacity = 1.0;
         _contentAlpha = 0.0;
 
-        _contentView = [[UIView alloc] init];
-        _contentView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        _contentView.alpha = 0.0;
-
         _shimmerLayer = [CAGradientLayer layer];
         // Disable implicit animations on the gradient layer
         _shimmerLayer.actions = @{
@@ -126,9 +121,16 @@ static void _unregisterView(GleamView *view) {
             @"transform": [NSNull null],
         };
 
-        self.contentView = _contentView;
     }
     return self;
+}
+
+- (void)mountChildComponentView:(UIView<RCTComponentViewProtocol> *)childComponentView index:(NSInteger)index
+{
+    [super mountChildComponentView:childComponentView index:index];
+    if (_loading) {
+        childComponentView.alpha = 0.0;
+    }
 }
 
 - (void)layoutSubviews
@@ -257,7 +259,7 @@ static void _unregisterView(GleamView *view) {
         switch (_transitionTypeValue) {
             case 1: { // Shrink — scale down with mask clipping
                 _contentAlpha = eased;
-                _contentView.alpha = _contentAlpha;
+                [self _setChildrenAlpha:_contentAlpha];
                 CGFloat shrinkOpacity = 1.0 - fmin(eased * 2.5, 1.0);
                 _shimmerLayer.opacity = shrinkOpacity;
                 CGFloat scale = 1.0 - eased * 0.5;
@@ -278,7 +280,7 @@ static void _unregisterView(GleamView *view) {
             }
             case 2: { // Collapse — vertically then horizontally via clip rect
                 _contentAlpha = eased;
-                _contentView.alpha = _contentAlpha;
+                [self _setChildrenAlpha:_contentAlpha];
                 CGFloat collapseOpacity = 1.0 - fmin(eased * 2.5, 1.0);
                 _shimmerLayer.opacity = collapseOpacity;
                 CGRect bounds = self.bounds;
@@ -301,7 +303,7 @@ static void _unregisterView(GleamView *view) {
             }
             default: // Fade
                 _contentAlpha = eased;
-                _contentView.alpha = _contentAlpha;
+                [self _setChildrenAlpha:_contentAlpha];
                 _shimmerOpacity = 1.0 - eased;
                 _shimmerLayer.opacity = _shimmerOpacity;
                 break;
@@ -314,6 +316,13 @@ static void _unregisterView(GleamView *view) {
         }
     } else if (_loading) {
         [self _updateGradientPosition];
+    }
+}
+
+- (void)_setChildrenAlpha:(CGFloat)alpha
+{
+    for (UIView *subview in self.subviews) {
+        subview.alpha = alpha;
     }
 }
 
@@ -378,7 +387,7 @@ static void _unregisterView(GleamView *view) {
         _isTransitioning = NO;
         _contentAlpha = 0.0;
         _shimmerOpacity = 1.0;
-        _contentView.alpha = 0.0;
+        [self _setChildrenAlpha:0.0];
         _shimmerLayer.opacity = 1.0;
         _shimmerLayer.frame = self.bounds;
         if (_shimmerLayer.superlayer != self.layer) {
@@ -396,7 +405,7 @@ static void _unregisterView(GleamView *view) {
             // Clock stays registered to drive the transition
         } else {
             [self _unregisterClock];
-            _contentView.alpha = 1.0;
+            [self _setChildrenAlpha:1.0];
             _shimmerLayer.opacity = 0.0;
             [_shimmerLayer removeFromSuperlayer];
             [self _emitTransitionEnd:YES];
@@ -408,7 +417,7 @@ static void _unregisterView(GleamView *view) {
 {
     _isTransitioning = NO;
     [self _unregisterClock];
-    _contentView.alpha = 1.0;
+    [self _setChildrenAlpha:1.0];
     _shimmerLayer.opacity = 0.0;
     _shimmerLayer.transform = CATransform3DIdentity;
     _shimmerLayer.mask = nil;
