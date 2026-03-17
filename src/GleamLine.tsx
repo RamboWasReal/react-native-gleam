@@ -1,9 +1,14 @@
 import { useContext, useLayoutEffect } from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  View,
+  type AccessibilityProps,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import NativeGleamView, { type NativeProps } from './GleamViewNativeComponent';
 import { GleamContext } from './GleamContext';
 
-export interface GleamLineProps {
+export interface GleamLineProps extends AccessibilityProps {
   children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   testID?: string;
@@ -17,6 +22,7 @@ export function GleamLine({
   testID,
   delay,
   onTransitionEnd,
+  ...accessibilityProps
 }: GleamLineProps) {
   const ctx = useContext(GleamContext);
   const register = ctx?.registerLine;
@@ -31,7 +37,7 @@ export function GleamLine({
       console.warn('GleamView.Line must be used inside a GleamView');
     }
     return (
-      <View style={style} testID={testID}>
+      <View style={style} testID={testID} {...accessibilityProps}>
         {children}
       </View>
     );
@@ -51,6 +57,7 @@ export function GleamLine({
       onTransitionEnd={onTransitionEnd}
       style={style}
       testID={testID}
+      {...accessibilityProps}
     >
       {children}
     </NativeGleamView>

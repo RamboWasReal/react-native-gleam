@@ -84,6 +84,7 @@ function GleamViewComponent(props: NativeProps) {
       lineCountRef.current--;
       if (lineCountRef.current === 0) {
         setHasLines(false);
+        warnedTransitionRef.current = false;
       }
     };
   }, []);

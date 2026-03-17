@@ -473,6 +473,23 @@ describe('GleamView.Line', () => {
     );
   });
 
+  it('passes accessibility props to the native component', () => {
+    render(
+      <GleamView loading={true}>
+        <GleamView.Line
+          testID="line"
+          accessibilityLabel="Loading title"
+          accessibilityRole="text"
+        >
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    const props = screen.getByTestId('line').props;
+    expect(props.accessibilityLabel).toBe('Loading title');
+    expect(props.accessibilityRole).toBe('text');
+  });
+
   it('passes onTransitionEnd to the native component', () => {
     const handler = jest.fn();
     render(
@@ -796,6 +813,44 @@ describe('GleamView.Line composition', () => {
     expect(spy).toHaveBeenCalledWith(
       expect.stringContaining('onTransitionEnd is ignored')
     );
+    spy.mockRestore();
+  });
+
+  it('re-warns after Lines removed and re-added', () => {
+    const spy = jest.spyOn(console, 'warn').mockImplementation();
+    const handler = jest.fn();
+    const { rerender } = render(
+      <GleamView loading={true} onTransitionEnd={handler}>
+        <GleamView.Line testID="line">
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    const initialCalls = spy.mock.calls.filter((c) =>
+      String(c[0]).includes('onTransitionEnd is ignored')
+    ).length;
+    expect(initialCalls).toBeGreaterThanOrEqual(1);
+
+    // Remove Lines → reset warning ref
+    rerender(
+      <GleamView loading={true} onTransitionEnd={handler}>
+        <Text>No lines</Text>
+      </GleamView>
+    );
+    spy.mockClear();
+
+    // Re-add Lines → should warn again (ref was reset)
+    rerender(
+      <GleamView loading={true} onTransitionEnd={handler}>
+        <GleamView.Line testID="line">
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    const rewarnCalls = spy.mock.calls.filter((c) =>
+      String(c[0]).includes('onTransitionEnd is ignored')
+    ).length;
+    expect(rewarnCalls).toBeGreaterThanOrEqual(1);
     spy.mockRestore();
   });
 

@@ -76,6 +76,8 @@ Lines inherit `loading`, `speed`, `direction`, `baseColor`, `highlightColor`, `i
 
 For best performance, place `GleamView.Line` as direct children of `GleamView` (or inside fragments). Lines nested inside intermediate wrappers (e.g., `<View>`) still work, but require an extra render cycle to detect.
 
+Every `GleamView` provides context to its subtree. A `GleamView.Line` always binds to its nearest `GleamView` ancestor — nested `GleamView` components each control their own Lines independently.
+
 ### Staggered skeleton
 
 ```tsx
@@ -132,7 +134,7 @@ All standard `View` props are also supported (`style`, `testID`, etc.). Note: th
 | `onTransitionEnd` | `function` | — | Called when this line's transition completes |
 | `testID` | `string` | — | Test identifier |
 
-All other shimmer props (`loading`, `speed`, `direction`, etc.) are inherited from the parent `GleamView`.
+All standard accessibility props (`accessibilityLabel`, `accessibilityRole`, etc.) and shimmer props (`loading`, `speed`, `direction`, etc.) are supported. Shimmer props are inherited from the parent `GleamView`.
 
 ### GleamDirection
 
