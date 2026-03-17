@@ -405,7 +405,7 @@ static void _unregisterView(GleamView *view) {
         if (shouldAnimate) {
             _isTransitioning = YES;
             _transitionElapsed = 0.0;
-            // Clock stays registered to drive the transition
+            [self _registerClock];
         } else {
             [self _unregisterClock];
             [self _setChildrenAlpha:1.0];
