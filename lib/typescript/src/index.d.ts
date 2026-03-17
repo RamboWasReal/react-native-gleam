@@ -4,7 +4,11 @@ import { type NativeProps } from './GleamViewNativeComponent';
 import { GleamLine } from './GleamLine';
 export type { NativeProps } from './GleamViewNativeComponent';
 export type { GleamLineProps } from './GleamLine';
-/** Props accepted by GleamView, including ref (React 19 ref-as-prop). */
+/**
+ * Props accepted by GleamView, including ref (React 19 ref-as-prop).
+ * Use this type instead of `ComponentProps<typeof GleamView>` for
+ * accurate ref typing.
+ */
 export type GleamViewProps = NativeProps & {
     ref?: React.Ref<View>;
 };
