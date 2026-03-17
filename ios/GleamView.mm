@@ -128,8 +128,8 @@ static void _unregisterView(GleamView *view) {
 - (void)mountChildComponentView:(UIView<RCTComponentViewProtocol> *)childComponentView index:(NSInteger)index
 {
     [super mountChildComponentView:childComponentView index:index];
-    if (_loading) {
-        childComponentView.alpha = 0.0;
+    if (_loading || _isTransitioning) {
+        childComponentView.alpha = _contentAlpha;
     }
 }
 
