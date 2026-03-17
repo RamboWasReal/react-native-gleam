@@ -1,4 +1,4 @@
-import { useContext, useLayoutEffect } from 'react';
+import { useContext, useLayoutEffect, type ReactNode } from 'react';
 import {
   View,
   type AccessibilityProps,
@@ -9,7 +9,7 @@ import NativeGleamView, { type NativeProps } from './GleamViewNativeComponent';
 import { GleamContext } from './GleamContext';
 
 export interface GleamLineProps extends AccessibilityProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   style?: StyleProp<ViewStyle>;
   testID?: string;
   delay?: NativeProps['delay'];

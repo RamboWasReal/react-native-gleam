@@ -1,7 +1,8 @@
+import { type ReactNode } from 'react';
 import { type AccessibilityProps, type StyleProp, type ViewStyle } from 'react-native';
 import { type NativeProps } from './GleamViewNativeComponent';
 export interface GleamLineProps extends AccessibilityProps {
-    children?: React.ReactNode;
+    children?: ReactNode;
     style?: StyleProp<ViewStyle>;
     testID?: string;
     delay?: NativeProps['delay'];
