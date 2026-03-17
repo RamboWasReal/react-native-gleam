@@ -2,8 +2,8 @@
 
 Native-powered shimmer loading effect for React Native. Built with pure native animations — no reanimated, no SVG, zero dependencies.
 
-- **iOS**: `CAGradientLayer` + `CADisplayLink`
-- **Android**: `Choreographer` + `LinearGradient`
+- **iOS**: `CAGradientLayer` + `CABasicAnimation`
+- **Android**: `ValueAnimator` + `LinearGradient`
 - **Fabric only** (New Architecture)
 
 https://github.com/user-attachments/assets/70eb886c-f3e2-4611-8ecc-0b03227267d0
@@ -52,6 +52,30 @@ function UserCard({ loading, user }) {
 
 When `loading={true}`, children are hidden and a shimmer animation plays. When `loading={false}`, the shimmer fades out and children fade in.
 
+### Multi-line skeleton (`GleamView.Line`)
+
+Use `GleamView.Line` to create individual shimmer bars that inherit props from a parent `GleamView`. No conditional rendering — the wrapper pattern works for multi-line skeletons too.
+
+```tsx
+<GleamView loading={loading} speed={800} baseColor="#E0E0E0">
+  <GleamView.Line style={{ height: 22, borderRadius: 6, width: '70%' }}>
+    <Text style={{ fontSize: 16 }}>{title}</Text>
+  </GleamView.Line>
+  <GleamView.Line
+    style={{ height: 16, borderRadius: 4, width: '50%' }}
+    delay={100}
+  >
+    <Text style={{ fontSize: 13 }}>{subtitle}</Text>
+  </GleamView.Line>
+</GleamView>
+```
+
+When `loading={true}`, each `GleamView.Line` renders its own shimmer bar, sized by `style`. The parent acts as a plain container (no block shimmer). When `loading={false}`, Lines become transparent and children render normally.
+
+Lines inherit `loading`, `speed`, `direction`, `baseColor`, `highlightColor`, `intensity`, `transitionDuration`, and `transitionType` from the parent. `delay` and `onTransitionEnd` are per-line.
+
+For best performance, place `GleamView.Line` as direct children of `GleamView` (or inside fragments). Lines nested inside intermediate wrappers (e.g., `<View>`) still work, but require an extra render cycle to detect.
+
 ### Staggered skeleton
 
 ```tsx
@@ -99,6 +123,17 @@ When `loading={true}`, children are hidden and a shimmer animation plays. When `
 
 All standard `View` props are also supported (`style`, `testID`, etc.). Note: the shimmer overlay supports uniform `borderRadius` only — per-corner radii are not applied to the shimmer.
 
+### GleamView.Line Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `style` | `ViewStyle` | — | Style for the shimmer bar (height, width, borderRadius) |
+| `delay` | `number` | `0` | Phase offset for this line (useful for stagger) |
+| `onTransitionEnd` | `function` | — | Called when this line's transition completes |
+| `testID` | `string` | — | Test identifier |
+
+All other shimmer props (`loading`, `speed`, `direction`, etc.) are inherited from the parent `GleamView`.
+
 ### GleamDirection
 
 ```tsx
@@ -144,6 +179,15 @@ When `loading` switches to `false`:
 All shimmer instances sharing the same `speed` are automatically synchronized via a shared clock.
 
 The shimmer respects uniform `borderRadius` and standard view styles.
+
+## Breaking changes (beta)
+
+- `GleamView` no longer forwards `ref`. If you need a ref to the underlying view, wrap `GleamView` in a `View` and attach the ref there.
+- When `GleamView.Line` children are present, the parent `GleamView` renders as a plain `View` container. `onTransitionEnd` on the parent is ignored in this mode — use `onTransitionEnd` on individual `GleamView.Line` components instead. A dev warning is emitted if this happens.
+
+## Limitations
+
+- The shimmer overlay supports uniform `borderRadius` only — per-corner radii are not applied to the shimmer.
 
 ## License
 

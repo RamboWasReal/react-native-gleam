@@ -1,4 +1,4 @@
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import { GleamView, GleamDirection, GleamTransition } from '../index';
 
@@ -385,11 +385,511 @@ describe('combined props', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GleamView.Line — inherits shimmer props from parent
+// ---------------------------------------------------------------------------
+describe('GleamView.Line', () => {
+  it('renders children inside a parent GleamView', () => {
+    render(
+      <GleamView loading={true}>
+        <GleamView.Line testID="line">
+          <Text>Line content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByText('Line content')).toBeTruthy();
+  });
+
+  it('inherits loading from parent', () => {
+    render(
+      <GleamView loading={true}>
+        <GleamView.Line testID="line">
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByTestId('line').props.loading).toBe(true);
+  });
+
+  it('inherits shimmer props from parent', () => {
+    render(
+      <GleamView
+        loading={true}
+        speed={800}
+        direction="rtl"
+        transitionDuration={500}
+        transitionType="shrink"
+        intensity={0.5}
+        baseColor="#D4E6F1"
+        highlightColor="#EBF5FB"
+      >
+        <GleamView.Line testID="line">
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    const props = screen.getByTestId('line').props;
+    expect(props.loading).toBe(true);
+    expect(props.speed).toBe(800);
+    expect(props.direction).toBe('rtl');
+    expect(props.transitionDuration).toBe(500);
+    expect(props.transitionType).toBe('shrink');
+    expect(props.intensity).toBe(0.5);
+    expect(props.baseColor).toBe('#D4E6F1');
+    expect(props.highlightColor).toBe('#EBF5FB');
+  });
+
+  it('uses its own delay instead of parent', () => {
+    render(
+      <GleamView loading={true} delay={999}>
+        <GleamView.Line testID="line" delay={200}>
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByTestId('line').props.delay).toBe(200);
+  });
+
+  it('passes delay=undefined by default (not inherited)', () => {
+    render(
+      <GleamView loading={true} delay={500}>
+        <GleamView.Line testID="line">
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByTestId('line').props.delay).toBeUndefined();
+  });
+
+  it('passes style to the native component', () => {
+    render(
+      <GleamView loading={true}>
+        <GleamView.Line testID="line" style={{ height: 20, borderRadius: 4 }}>
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByTestId('line').props.style).toEqual(
+      expect.objectContaining({ height: 20, borderRadius: 4 })
+    );
+  });
+
+  it('passes onTransitionEnd to the native component', () => {
+    const handler = jest.fn();
+    render(
+      <GleamView loading={true}>
+        <GleamView.Line testID="line" onTransitionEnd={handler}>
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByTestId('line').props.onTransitionEnd).toBeDefined();
+  });
+
+  it('renders multiple lines', () => {
+    render(
+      <GleamView loading={true}>
+        <GleamView.Line testID="line1">
+          <Text>Title</Text>
+        </GleamView.Line>
+        <GleamView.Line testID="line2">
+          <Text>Subtitle</Text>
+        </GleamView.Line>
+        <GleamView.Line testID="line3">
+          <Text>Body</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByTestId('line1').props.loading).toBe(true);
+    expect(screen.getByTestId('line2').props.loading).toBe(true);
+    expect(screen.getByTestId('line3').props.loading).toBe(true);
+    expect(screen.getByText('Title')).toBeTruthy();
+    expect(screen.getByText('Subtitle')).toBeTruthy();
+    expect(screen.getByText('Body')).toBeTruthy();
+  });
+
+  it('parent becomes a plain View when Lines are present', () => {
+    render(
+      <GleamView testID="parent" loading={true}>
+        <GleamView.Line testID="line">
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    // Parent is a plain View — no shimmer props
+    const parent = screen.getByTestId('parent');
+    expect(parent.props.loading).toBeUndefined();
+    expect(parent.props.speed).toBeUndefined();
+  });
+
+  it('detects Lines wrapped in a fragment', () => {
+    render(
+      <GleamView testID="parent" loading={true}>
+        <>
+          <GleamView.Line testID="line">
+            <Text>Content</Text>
+          </GleamView.Line>
+        </>
+      </GleamView>
+    );
+    // Parent should be a plain View even when Line is inside a fragment
+    const parent = screen.getByTestId('parent');
+    expect(parent.props.loading).toBeUndefined();
+    expect(screen.getByTestId('line').props.loading).toBe(true);
+  });
+
+  it('reverts to native GleamView when all Lines unmount', () => {
+    const { rerender } = render(
+      <GleamView testID="parent" loading={true}>
+        <GleamView.Line testID="line">
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    // Parent is plain View (no shimmer props)
+    expect(screen.getByTestId('parent').props.loading).toBeUndefined();
+
+    // Re-render without Lines → parent should be native GleamView again
+    rerender(
+      <GleamView testID="parent" loading={true}>
+        <Text>No lines</Text>
+      </GleamView>
+    );
+    expect(screen.getByTestId('parent').props.loading).toBe(true);
+  });
+
+  it('staggered lines with individual delays', () => {
+    render(
+      <GleamView loading={true} speed={800} baseColor="#D4E6F1">
+        <GleamView.Line testID="line1" delay={0}>
+          <Text>First</Text>
+        </GleamView.Line>
+        <GleamView.Line testID="line2" delay={100}>
+          <Text>Second</Text>
+        </GleamView.Line>
+        <GleamView.Line testID="line3" delay={200}>
+          <Text>Third</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByTestId('line1').props.delay).toBe(0);
+    expect(screen.getByTestId('line2').props.delay).toBe(100);
+    expect(screen.getByTestId('line3').props.delay).toBe(200);
+    // All inherit shared props
+    expect(screen.getByTestId('line1').props.speed).toBe(800);
+    expect(screen.getByTestId('line2').props.baseColor).toBe('#D4E6F1');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GleamView.Line — dynamic state transitions
+// ---------------------------------------------------------------------------
+describe('GleamView.Line state transitions', () => {
+  it('Lines update when parent props change', () => {
+    const { rerender } = render(
+      <GleamView loading={true} speed={800}>
+        <GleamView.Line testID="line">
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByTestId('line').props.speed).toBe(800);
+
+    rerender(
+      <GleamView loading={false} speed={1200}>
+        <GleamView.Line testID="line">
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByTestId('line').props.loading).toBe(false);
+    expect(screen.getByTestId('line').props.speed).toBe(1200);
+  });
+
+  it('switches to plain View when Lines are added dynamically', () => {
+    const { rerender } = render(
+      <GleamView testID="parent" loading={true}>
+        <Text>Normal content</Text>
+      </GleamView>
+    );
+    expect(screen.getByTestId('parent').props.loading).toBe(true);
+
+    rerender(
+      <GleamView testID="parent" loading={true}>
+        <GleamView.Line testID="line">
+          <Text>Line content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByTestId('parent').props.loading).toBeUndefined();
+    expect(screen.getByTestId('line').props.loading).toBe(true);
+  });
+
+  it('stays in Line mode until all Lines are removed', () => {
+    const { rerender } = render(
+      <GleamView testID="parent" loading={true}>
+        <GleamView.Line testID="line1">
+          <Text>A</Text>
+        </GleamView.Line>
+        <GleamView.Line testID="line2">
+          <Text>B</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByTestId('parent').props.loading).toBeUndefined();
+
+    // Remove one Line — should still be in Line mode
+    rerender(
+      <GleamView testID="parent" loading={true}>
+        <GleamView.Line testID="line1">
+          <Text>A</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByTestId('parent').props.loading).toBeUndefined();
+
+    // Remove last Line — should revert to native
+    rerender(
+      <GleamView testID="parent" loading={true}>
+        <Text>No lines</Text>
+      </GleamView>
+    );
+    expect(screen.getByTestId('parent').props.loading).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GleamView.Line — child detection edge cases
+// ---------------------------------------------------------------------------
+describe('GleamView.Line child detection', () => {
+  it('detects Lines in deeply nested fragments', () => {
+    render(
+      <GleamView testID="parent" loading={true}>
+        <>
+          <>
+            <GleamView.Line testID="line">
+              <Text>Deep</Text>
+            </GleamView.Line>
+          </>
+        </>
+      </GleamView>
+    );
+    expect(screen.getByTestId('parent').props.loading).toBeUndefined();
+    expect(screen.getByTestId('line').props.loading).toBe(true);
+  });
+
+  it('detects Lines inside a non-fragment wrapper via registration', () => {
+    render(
+      <GleamView testID="parent" loading={true}>
+        <View>
+          <GleamView.Line testID="line">
+            <Text>Content</Text>
+          </GleamView.Line>
+        </View>
+      </GleamView>
+    );
+    // registerLine fires in useLayoutEffect, switching to plain View
+    const parent = screen.getByTestId('parent');
+    expect(parent.props.loading).toBeUndefined();
+    expect(screen.getByTestId('line').props.loading).toBe(true);
+  });
+
+  it('renders as native GleamView when conditional Line is false', () => {
+    render(
+      <GleamView testID="parent" loading={true}>
+        {false && (
+          <GleamView.Line testID="line">
+            <Text>Nope</Text>
+          </GleamView.Line>
+        )}
+      </GleamView>
+    );
+    expect(screen.getByTestId('parent').props.loading).toBe(true);
+  });
+
+  it('handles mixed Line and non-Line children', () => {
+    render(
+      <GleamView testID="parent" loading={true}>
+        <GleamView.Line testID="line">
+          <Text>Shimmer</Text>
+        </GleamView.Line>
+        <Text>Static</Text>
+      </GleamView>
+    );
+    expect(screen.getByTestId('parent').props.loading).toBeUndefined();
+    expect(screen.getByTestId('line').props.loading).toBe(true);
+    expect(screen.getByText('Static')).toBeTruthy();
+  });
+
+  it('handles null children', () => {
+    render(
+      <GleamView testID="gleam" loading={true}>
+        {null}
+      </GleamView>
+    );
+    expect(screen.getByTestId('gleam').props.loading).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GleamView.Line — composition edge cases
+// ---------------------------------------------------------------------------
+describe('GleamView.Line composition', () => {
+  it('Lines inherit loading=false from parent', () => {
+    render(
+      <GleamView loading={false}>
+        <GleamView.Line testID="line">
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByTestId('line').props.loading).toBe(false);
+  });
+
+  it('Line with no children renders as empty shimmer bar', () => {
+    render(
+      <GleamView loading={true}>
+        <GleamView.Line testID="line" style={{ height: 16 }} />
+      </GleamView>
+    );
+    expect(screen.getByTestId('line')).toBeTruthy();
+    expect(screen.getByTestId('line').props.loading).toBe(true);
+  });
+
+  it('Line renders multiple children', () => {
+    render(
+      <GleamView loading={true}>
+        <GleamView.Line testID="line">
+          <Text>First</Text>
+          <Text>Second</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByText('First')).toBeTruthy();
+    expect(screen.getByText('Second')).toBeTruthy();
+  });
+
+  it('nested GleamView inside a Line works independently', () => {
+    render(
+      <GleamView loading={true} speed={800}>
+        <GleamView.Line testID="outer-line">
+          <GleamView testID="inner" loading={false} speed={400}>
+            <Text>Nested</Text>
+          </GleamView>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByTestId('outer-line').props.speed).toBe(800);
+    expect(screen.getByTestId('inner').props.loading).toBe(false);
+    expect(screen.getByTestId('inner').props.speed).toBe(400);
+  });
+
+  it('warns when onTransitionEnd is passed with Lines present', () => {
+    const spy = jest.spyOn(console, 'warn').mockImplementation();
+    const handler = jest.fn();
+    render(
+      <GleamView loading={true} onTransitionEnd={handler}>
+        <GleamView.Line testID="line">
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining('onTransitionEnd is ignored')
+    );
+    spy.mockRestore();
+  });
+
+  it('parent View does not leak any shimmer props when Lines present', () => {
+    const spy = jest.spyOn(console, 'warn').mockImplementation();
+    const handler = jest.fn();
+    render(
+      <GleamView
+        testID="parent"
+        loading={true}
+        speed={800}
+        direction="rtl"
+        delay={200}
+        transitionDuration={500}
+        transitionType="shrink"
+        intensity={0.5}
+        baseColor="#D4E6F1"
+        highlightColor="#EBF5FB"
+        onTransitionEnd={handler}
+        style={{ width: 100 }}
+      >
+        <GleamView.Line testID="line">
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    spy.mockRestore();
+    const parent = screen.getByTestId('parent');
+    expect(parent.props.loading).toBeUndefined();
+    expect(parent.props.speed).toBeUndefined();
+    expect(parent.props.direction).toBeUndefined();
+    expect(parent.props.delay).toBeUndefined();
+    expect(parent.props.transitionDuration).toBeUndefined();
+    expect(parent.props.transitionType).toBeUndefined();
+    expect(parent.props.intensity).toBeUndefined();
+    expect(parent.props.baseColor).toBeUndefined();
+    expect(parent.props.highlightColor).toBeUndefined();
+    expect(parent.props.onTransitionEnd).toBeUndefined();
+    // View props preserved
+    expect(parent.props.testID).toBe('parent');
+    expect(parent.props.style).toEqual(expect.objectContaining({ width: 100 }));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GleamView.Line outside parent
+// ---------------------------------------------------------------------------
+describe('GleamView.Line outside parent', () => {
+  it('renders children as fallback', () => {
+    const spy = jest.spyOn(console, 'warn').mockImplementation();
+    render(
+      <GleamView.Line>
+        <Text>Orphan</Text>
+      </GleamView.Line>
+    );
+    expect(screen.getByText('Orphan')).toBeTruthy();
+    spy.mockRestore();
+  });
+
+  it('forwards testID in fallback mode', () => {
+    const spy = jest.spyOn(console, 'warn').mockImplementation();
+    render(
+      <GleamView.Line testID="orphan-line">
+        <Text>Orphan</Text>
+      </GleamView.Line>
+    );
+    expect(screen.getByTestId('orphan-line')).toBeTruthy();
+    spy.mockRestore();
+  });
+
+  it('warns in __DEV__', () => {
+    const spy = jest.spyOn(console, 'warn').mockImplementation();
+    render(
+      <GleamView.Line>
+        <Text>Orphan</Text>
+      </GleamView.Line>
+    );
+    expect(spy).toHaveBeenCalledWith(
+      'GleamView.Line must be used inside a GleamView'
+    );
+    spy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Exports
 // ---------------------------------------------------------------------------
 describe('exports', () => {
   it('exports GleamView component', () => {
     expect(GleamView).toBeDefined();
+  });
+
+  it('exports GleamView.Line component', () => {
+    expect(GleamView.Line).toBeDefined();
   });
 
   it('exports GleamDirection enum', () => {
