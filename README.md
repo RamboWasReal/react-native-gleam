@@ -158,6 +158,7 @@ GleamTransition.Collapse  // 'collapse' — shimmer collapses vertically then ho
 
 ## Requirements
 
+- React **19+**
 - React Native **0.78+** (New Architecture / Fabric)
 - iOS 15+
 - Android SDK 24+
