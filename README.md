@@ -134,7 +134,7 @@ All standard `View` props are also supported (`style`, `testID`, etc.). Note: th
 | `onTransitionEnd` | `function` | — | Called when this line's transition completes |
 | `testID` | `string` | — | Test identifier |
 
-All standard accessibility props (`accessibilityLabel`, `accessibilityRole`, etc.) and shimmer props (`loading`, `speed`, `direction`, etc.) are supported. Shimmer props are inherited from the parent `GleamView`.
+All standard accessibility props (`accessibilityLabel`, `accessibilityRole`, etc.) are accepted directly. Shimmer props (`loading`, `speed`, `direction`, etc.) cannot be passed to `GleamView.Line` — they are inherited automatically from the parent `GleamView`.
 
 ### GleamDirection
 
