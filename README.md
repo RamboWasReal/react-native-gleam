@@ -184,7 +184,6 @@ The shimmer respects uniform `borderRadius` and standard view styles.
 
 ## Breaking changes (beta)
 
-- `GleamView` no longer forwards `ref`. If you need a ref to the underlying view, wrap `GleamView` in a `View` and attach the ref there.
 - When `GleamView.Line` children are present, the parent `GleamView` renders as a plain `View` container. `onTransitionEnd` on the parent is ignored in this mode — use `onTransitionEnd` on individual `GleamView.Line` components instead. A dev warning is emitted if this happens.
 
 ## Limitations

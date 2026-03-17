@@ -4,8 +4,13 @@ import NativeGleamView, { type NativeProps } from './GleamViewNativeComponent';
 import { GleamContext, type GleamContextValue } from './GleamContext';
 import { GleamLine } from './GleamLine';
 
-export type { NativeProps as GleamViewProps } from './GleamViewNativeComponent';
+export type { NativeProps } from './GleamViewNativeComponent';
 export type { GleamLineProps } from './GleamLine';
+
+/** Props accepted by GleamView, including ref (React 19 ref-as-prop). */
+export type GleamViewProps = NativeProps & {
+  ref?: React.Ref<View>;
+};
 
 export enum GleamDirection {
   LeftToRight = 'ltr',
@@ -63,7 +68,14 @@ function hasLineChildren(children: React.ReactNode): boolean {
   return found;
 }
 
-function GleamViewComponent(props: NativeProps) {
+// React 19: ref is a regular prop, no forwardRef needed.
+// Internal ref type is loosened to avoid monorepo type conflicts between
+// root and example workspace @types/react copies. The exported GleamViewProps
+// provides the correct consumer-facing type.
+function GleamViewComponent({
+  ref,
+  ...props
+}: NativeProps & { ref?: React.Ref<unknown> }) {
   const {
     loading,
     speed,
@@ -117,6 +129,10 @@ function GleamViewComponent(props: NativeProps) {
     ]
   );
 
+  // Cast needed: View and NativeGleamView accept Ref<ReactNativeElement>
+  // but that type isn't publicly exported from react-native. Safe at runtime.
+  const nativeRef = ref as any;
+
   if (hasLines) {
     if (__DEV__ && props.onTransitionEnd && !warnedTransitionRef.current) {
       warnedTransitionRef.current = true;
@@ -127,14 +143,18 @@ function GleamViewComponent(props: NativeProps) {
     }
     return (
       <GleamContext.Provider value={contextValue}>
-        <View {...pickViewProps(props)}>{children}</View>
+        <View ref={nativeRef} {...pickViewProps(props)}>
+          {children}
+        </View>
       </GleamContext.Provider>
     );
   }
 
   return (
     <GleamContext.Provider value={contextValue}>
-      <NativeGleamView {...props}>{children}</NativeGleamView>
+      <NativeGleamView ref={nativeRef} {...props}>
+        {children}
+      </NativeGleamView>
     </GleamContext.Provider>
   );
 }
