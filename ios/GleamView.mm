@@ -319,8 +319,12 @@ static void _unregisterView(GleamView *view) {
         } else {
             _wasLoading = NO;
             _contentAlpha = 1.0;
-            _lastSetChildrenAlpha = 1.0;
             _shimmerOpacity = 0.0;
+            _lastSetChildrenAlpha = -1.0;
+            for (UIView *subview in self.subviews) {
+                subview.alpha = 1.0;
+            }
+            _lastSetChildrenAlpha = 1.0;
         }
     } else {
         if (colorsChanged) {
