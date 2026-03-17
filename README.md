@@ -121,7 +121,7 @@ Every `GleamView` provides context to its subtree. A `GleamView.Line` always bin
 | `intensity` | `number` | `1` | Highlight strength (0-1). Lower = more subtle shimmer |
 | `baseColor` | `string` | `#E0E0E0` | Background color of the shimmer |
 | `highlightColor` | `string` | `#F5F5F5` | Color of the moving highlight |
-| `onTransitionEnd` | `function` | — | Called when the fade transition completes. Receives `{ nativeEvent: { finished: boolean } }` |
+| `onTransitionEnd` | `function` | — | Called when the transition completes or is interrupted. Receives `{ nativeEvent: { finished: boolean } }` — `true` if completed, `false` if interrupted (e.g., `loading` toggled back to `true`) |
 
 All standard `View` props are also supported (`style`, `testID`, etc.). Note: the shimmer overlay supports uniform `borderRadius` only — per-corner radii are not applied to the shimmer.
 
@@ -176,7 +176,7 @@ When `loading` switches to `false`:
 
 1. The shimmer transitions out over `transitionDuration` ms (style depends on `transitionType`)
 2. Children fade in simultaneously
-3. `onTransitionEnd` fires when complete
+3. `onTransitionEnd` fires with `finished: true` (or `finished: false` if interrupted)
 
 All shimmer instances sharing the same `speed` are automatically synchronized via a shared clock.
 
