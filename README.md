@@ -52,6 +52,32 @@ function UserCard({ loading, user }) {
 
 When `loading={true}`, children are hidden and a shimmer animation plays. When `loading={false}`, the shimmer fades out and children fade in.
 
+### Multi-line skeleton (`GleamView.Line`)
+
+Use `GleamView.Line` to create individual shimmer bars that inherit props from a parent `GleamView`. No conditional rendering — the wrapper pattern works for multi-line skeletons too.
+
+```tsx
+<GleamView loading={loading} speed={800} baseColor="#E0E0E0">
+  <GleamView.Line style={{ height: 22, borderRadius: 6, width: '70%' }}>
+    <Text style={{ fontSize: 16 }}>{title}</Text>
+  </GleamView.Line>
+  <GleamView.Line
+    style={{ height: 16, borderRadius: 4, width: '50%' }}
+    delay={100}
+  >
+    <Text style={{ fontSize: 13 }}>{subtitle}</Text>
+  </GleamView.Line>
+</GleamView>
+```
+
+When `loading={true}`, each `GleamView.Line` renders its own shimmer bar, sized by `style`. The parent acts as a plain container (no block shimmer). When `loading={false}`, Lines become transparent and children render normally.
+
+Lines inherit `loading`, `speed`, `direction`, `baseColor`, `highlightColor`, `intensity`, `transitionDuration`, and `transitionType` from the parent. `delay` and `onTransitionEnd` are per-line.
+
+For best performance, place `GleamView.Line` as direct children of `GleamView` (or inside fragments). Lines nested inside intermediate wrappers (e.g., `<View>`) still work, but require an extra render cycle to detect.
+
+Every `GleamView` provides context to its subtree. A `GleamView.Line` always binds to its nearest `GleamView` ancestor — nested `GleamView` components each control their own Lines independently.
+
 ### Staggered skeleton
 
 ```tsx
@@ -95,9 +121,20 @@ When `loading={true}`, children are hidden and a shimmer animation plays. When `
 | `intensity` | `number` | `1` | Highlight strength (0-1). Lower = more subtle shimmer |
 | `baseColor` | `string` | `#E0E0E0` | Background color of the shimmer |
 | `highlightColor` | `string` | `#F5F5F5` | Color of the moving highlight |
-| `onTransitionEnd` | `function` | — | Called when the fade transition completes. Receives `{ nativeEvent: { finished: boolean } }` |
+| `onTransitionEnd` | `function` | — | Called when the transition completes or is interrupted. Receives `{ nativeEvent: { finished: boolean } }` — `true` if completed, `false` if interrupted (e.g., `loading` toggled back to `true`) |
 
 All standard `View` props are also supported (`style`, `testID`, etc.). Note: the shimmer overlay supports uniform `borderRadius` only — per-corner radii are not applied to the shimmer.
+
+### GleamView.Line Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `style` | `ViewStyle` | — | Style for the shimmer bar (height, width, borderRadius) |
+| `delay` | `number` | `0` | Phase offset for this line (useful for stagger) |
+| `onTransitionEnd` | `function` | — | Called when this line's transition completes |
+| `testID` | `string` | — | Test identifier |
+
+All standard accessibility props (`accessibilityLabel`, `accessibilityRole`, etc.) are accepted directly. Shimmer props (`loading`, `speed`, `direction`, etc.) cannot be passed to `GleamView.Line` — they are inherited automatically from the parent `GleamView`.
 
 ### GleamDirection
 
@@ -121,7 +158,8 @@ GleamTransition.Collapse  // 'collapse' — shimmer collapses vertically then ho
 
 ## Requirements
 
-- React Native **0.76+** (New Architecture / Fabric)
+- React **19+**
+- React Native **0.78+** (New Architecture / Fabric)
 - iOS 15+
 - Android SDK 24+
 
@@ -139,11 +177,19 @@ When `loading` switches to `false`:
 
 1. The shimmer transitions out over `transitionDuration` ms (style depends on `transitionType`)
 2. Children fade in simultaneously
-3. `onTransitionEnd` fires when complete
+3. `onTransitionEnd` fires with `finished: true` (or `finished: false` if interrupted)
 
 All shimmer instances sharing the same `speed` are automatically synchronized via a shared clock.
 
 The shimmer respects uniform `borderRadius` and standard view styles.
+
+## Breaking changes (beta)
+
+- When `GleamView.Line` children are present, the parent `GleamView` renders as a plain `View` container. `onTransitionEnd` on the parent is ignored in this mode — use `onTransitionEnd` on individual `GleamView.Line` components instead. A dev warning is emitted if this happens.
+
+## Limitations
+
+- The shimmer overlay supports uniform `borderRadius` only — per-corner radii are not applied to the shimmer.
 
 ## License
 

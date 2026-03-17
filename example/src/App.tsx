@@ -258,6 +258,39 @@ export default function App() {
         </View>
       </View>
 
+      {/* Multi-line skeleton using GleamView.Line */}
+      <Text style={styles.sectionLabel}>Multi-line (GleamView.Line)</Text>
+      <View style={styles.lineCard}>
+        <GleamView
+          loading={loading}
+          speed={speed}
+          intensity={intensity}
+          direction={direction}
+          baseColor={colors.base}
+          highlightColor={colors.highlight}
+          transitionDuration={transitionDuration}
+          transitionType={transitionType}
+        >
+          <GleamView.Line style={styles.lineTitle} delay={0}>
+            <Text style={styles.lineTitleText}>Article Title</Text>
+          </GleamView.Line>
+          <GleamView.Line style={styles.lineSubtitle} delay={100}>
+            <Text style={styles.lineSubtitleText}>
+              Published on March 15, 2026
+            </Text>
+          </GleamView.Line>
+          <GleamView.Line style={styles.lineBody} delay={200}>
+            <Text style={styles.lineBodyText}>
+              This is the first paragraph of the article content that wraps
+              across multiple lines.
+            </Text>
+          </GleamView.Line>
+          <GleamView.Line style={styles.lineBodyShort} delay={300}>
+            <Text style={styles.lineBodyText}>A shorter second paragraph.</Text>
+          </GleamView.Line>
+        </GleamView>
+      </View>
+
       {/* Staggered demo */}
       <Text style={styles.sectionLabel}>Staggered</Text>
       <View style={styles.staggered}>
@@ -459,6 +492,51 @@ const styles = StyleSheet.create({
   },
   chipTextSelected: {
     color: '#FFF',
+  },
+  lineCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    padding: 16,
+    marginBottom: 20,
+  },
+  lineTitle: {
+    height: 24,
+    borderRadius: 6,
+    width: '75%',
+    marginBottom: 8,
+  },
+  lineTitleText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#222',
+  },
+  lineSubtitle: {
+    height: 16,
+    borderRadius: 4,
+    width: '50%',
+    marginBottom: 12,
+  },
+  lineSubtitleText: {
+    fontSize: 12,
+    color: '#999',
+  },
+  lineBody: {
+    height: 40,
+    borderRadius: 4,
+    width: '100%',
+    marginBottom: 6,
+  },
+  lineBodyShort: {
+    height: 20,
+    borderRadius: 4,
+    width: '60%',
+  },
+  lineBodyText: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 20,
   },
   sectionLabel: {
     fontSize: 13,

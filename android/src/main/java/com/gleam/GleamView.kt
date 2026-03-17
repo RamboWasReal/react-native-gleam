@@ -325,6 +325,9 @@ class GleamView(context: Context) : ReactViewGroup(context) {
 
     private fun applyLoadingState(wasLoading: Boolean) {
         if (loading) {
+            if (isTransitioning) {
+                emitTransitionEnd(false)
+            }
             // Set isTransitioning=false BEFORE cancel to prevent stale onAnimationEnd
             isTransitioning = false
             transitionGeneration++
