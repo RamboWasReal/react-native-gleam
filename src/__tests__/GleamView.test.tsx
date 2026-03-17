@@ -296,6 +296,29 @@ describe('children and style', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Ref forwarding (React 19 ref-as-prop)
+// ---------------------------------------------------------------------------
+describe('ref forwarding', () => {
+  it('forwards ref in standalone mode', () => {
+    const ref = jest.fn();
+    render(<GleamView ref={ref} testID="gleam" />);
+    expect(ref).toHaveBeenCalled();
+  });
+
+  it('forwards ref in Line mode (plain View)', () => {
+    const ref = jest.fn();
+    render(
+      <GleamView ref={ref} testID="parent" loading={true}>
+        <GleamView.Line testID="line">
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(ref).toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Combined props (realistic usage)
 // ---------------------------------------------------------------------------
 describe('combined props', () => {
