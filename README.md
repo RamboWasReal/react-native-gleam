@@ -89,7 +89,7 @@ When `loading={true}`, children are hidden and a shimmer animation plays. When `
 | `loading` | `boolean` | `true` | Toggle shimmer on/off |
 | `speed` | `number` | `1000` | Duration of one shimmer cycle (ms) |
 | `direction` | `GleamDirection` | `LeftToRight` | Animation direction |
-| `delay` | `number` | `0` | Delay before animation starts (ms) — useful for stagger |
+| `delay` | `number` | `0` | Phase offset (ms) — offsets the shimmer cycle for stagger effects |
 | `transitionDuration` | `number` | `300` | Duration of the transition from shimmer to content (ms). `0` = instant |
 | `transitionType` | `GleamTransition` | `Fade` | Transition style when loading ends |
 | `intensity` | `number` | `1` | Highlight strength (0-1). Lower = more subtle shimmer |
@@ -97,7 +97,7 @@ When `loading={true}`, children are hidden and a shimmer animation plays. When `
 | `highlightColor` | `string` | `#F5F5F5` | Color of the moving highlight |
 | `onTransitionEnd` | `function` | — | Called when the fade transition completes. Receives `{ nativeEvent: { finished: boolean } }` |
 
-All standard `View` props are also supported (`style`, `testID`, etc.).
+All standard `View` props are also supported (`style`, `testID`, etc.). Note: the shimmer overlay supports uniform `borderRadius` only — per-corner radii are not applied to the shimmer.
 
 ### GleamDirection
 
@@ -143,7 +143,7 @@ When `loading` switches to `false`:
 
 All shimmer instances sharing the same `speed` are automatically synchronized via a shared clock.
 
-The shimmer respects `borderRadius` and all standard view styles.
+The shimmer respects uniform `borderRadius` and standard view styles.
 
 ## License
 

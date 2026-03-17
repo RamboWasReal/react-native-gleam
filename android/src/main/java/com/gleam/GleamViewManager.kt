@@ -81,6 +81,11 @@ class GleamViewManager : ViewGroupManager<GleamView>(),
     super.setBorderRadius(view, borderRadius)
   }
 
+  override fun onDropViewInstance(view: GleamView) {
+    view.cleanup()
+    super.onDropViewInstance(view)
+  }
+
   override fun needsCustomLayoutForChildren(): Boolean = false
 
   companion object {

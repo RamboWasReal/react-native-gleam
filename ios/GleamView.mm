@@ -20,35 +20,62 @@ typedef NS_ENUM(NSInteger, GleamDirection) {
 
 #pragma mark - Shared Display Link Clock
 
-static NSMutableSet<GleamView *> *_registeredViews;
+// Plain C array for zero-alloc per-frame iteration.
+// Cleanup is guaranteed via removeFromSuperview, prepareForRecycle, and dealloc.
+static GleamView * __strong *_views = NULL;
+static NSUInteger _viewCount = 0;
+static NSUInteger _viewCapacity = 0;
 static CADisplayLink *_displayLink;
-
-static void _ensureDisplayLink(void) {
-    if (!_registeredViews) {
-        _registeredViews = [NSMutableSet new];
-    }
-}
 
 static void _startDisplayLinkIfNeeded(void) {
     if (_displayLink) return;
     _displayLink = [CADisplayLink displayLinkWithTarget:[GleamView class] selector:@selector(_onFrame:)];
+    if (@available(iOS 15.0, *)) {
+        _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(30, 60, 60);
+    }
     [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
 }
 
 static void _stopDisplayLinkIfNeeded(void) {
-    if (_registeredViews.count > 0) return;
+    if (_viewCount > 0) return;
     [_displayLink invalidate];
     _displayLink = nil;
 }
 
 static void _registerView(GleamView *view) {
-    _ensureDisplayLink();
-    [_registeredViews addObject:view];
+    // Check duplicate
+    for (NSUInteger i = 0; i < _viewCount; i++) {
+        if (_views[i] == view) return;
+    }
+    // Grow if needed
+    if (_viewCount >= _viewCapacity) {
+        NSUInteger newCap = _viewCapacity == 0 ? 16 : _viewCapacity * 2;
+        GleamView * __strong *newBuf = (GleamView * __strong *)calloc(newCap, sizeof(GleamView *));
+        if (_views) {
+            for (NSUInteger i = 0; i < _viewCount; i++) {
+                newBuf[i] = _views[i];
+                _views[i] = nil;
+            }
+            free(_views);
+        }
+        _views = newBuf;
+        _viewCapacity = newCap;
+    }
+    _views[_viewCount++] = view;
     _startDisplayLinkIfNeeded();
 }
 
 static void _unregisterView(GleamView *view) {
-    [_registeredViews removeObject:view];
+    for (NSUInteger i = 0; i < _viewCount; i++) {
+        if (_views[i] == view) {
+            _views[i] = nil;
+            // Swap with last
+            _views[i] = _views[_viewCount - 1];
+            _views[_viewCount - 1] = nil;
+            _viewCount--;
+            break;
+        }
+    }
     _stopDisplayLinkIfNeeded();
 }
 
@@ -62,7 +89,7 @@ static void _unregisterView(GleamView *view) {
     CGFloat _speed;
     CGFloat _delay;
     CGFloat _transitionDuration;
-    NSInteger _transitionTypeValue; // 0=fade, 1=slide, 2=dissolve, 3=scale
+    NSInteger _transitionTypeValue; // 0=fade, 1=shrink, 2=collapse
     CGFloat _intensity;
     GleamDirection _direction;
     UIColor *_baseColor;
@@ -73,6 +100,8 @@ static void _unregisterView(GleamView *view) {
     CGFloat _transitionElapsed;
     CGFloat _shimmerOpacity;
     CGFloat _contentAlpha;
+    CGFloat _lastSetChildrenAlpha;
+    BOOL _didInitialSetup;
 }
 
 + (ComponentDescriptorProvider)componentDescriptorProvider
@@ -82,9 +111,15 @@ static void _unregisterView(GleamView *view) {
 
 + (void)_onFrame:(CADisplayLink *)link
 {
-    NSArray *views = [_registeredViews allObjects];
-    for (GleamView *view in views) {
-        [view _tick];
+    NSUInteger count = _viewCount;
+    if (count == 0) return;
+    CFTimeInterval now = CACurrentMediaTime();
+    // Iterate by index — safe even if _tick triggers unregister (swap-remove)
+    // Process in reverse to handle swap-remove correctly
+    for (NSUInteger i = count; i > 0; i--) {
+        if (i - 1 < _viewCount) {
+            [_views[i - 1] _tickWithTime:now];
+        }
     }
 }
 
@@ -109,9 +144,10 @@ static void _unregisterView(GleamView *view) {
         _isTransitioning = NO;
         _shimmerOpacity = 1.0;
         _contentAlpha = 0.0;
+        _lastSetChildrenAlpha = -1.0;
+        _didInitialSetup = NO;
 
         _shimmerLayer = [CAGradientLayer layer];
-        // Disable implicit animations on the gradient layer
         _shimmerLayer.actions = @{
             @"startPoint": [NSNull null],
             @"endPoint": [NSNull null],
@@ -120,7 +156,7 @@ static void _unregisterView(GleamView *view) {
             @"position": [NSNull null],
             @"transform": [NSNull null],
         };
-
+        _shimmerLayer.locations = @[@0.0, @0.5, @1.0];
     }
     return self;
 }
@@ -151,13 +187,54 @@ static void _unregisterView(GleamView *view) {
 - (void)removeFromSuperview
 {
     [self _unregisterClock];
+    if (_isTransitioning) {
+        _isTransitioning = NO;
+    }
+    // Reset to clean state based on loading
+    CGFloat targetAlpha = _loading ? 0.0 : 1.0;
+    _contentAlpha = targetAlpha;
+    _lastSetChildrenAlpha = -1.0;
+    for (UIView *subview in self.subviews) {
+        subview.alpha = targetAlpha;
+    }
+    _lastSetChildrenAlpha = targetAlpha;
+    _shimmerOpacity = _loading ? 1.0 : 0.0;
+    _shimmerLayer.opacity = _shimmerOpacity;
     _shimmerLayer.mask = nil;
+    _shimmerLayer.transform = CATransform3DIdentity;
+    [_shimmerLayer removeFromSuperlayer];
     [super removeFromSuperview];
+}
+
+- (void)prepareForRecycle
+{
+    [super prepareForRecycle];
+    [self _unregisterClock];
+    _isTransitioning = NO;
+    _shimmerLayer.mask = nil;
+    _shimmerLayer.transform = CATransform3DIdentity;
+    _shimmerLayer.opacity = 0.0;
+    [_shimmerLayer removeFromSuperlayer];
+    _contentAlpha = 0.0;
+    _lastSetChildrenAlpha = -1.0;
+    _shimmerOpacity = 1.0;
+    _loading = YES;
+    _wasLoading = YES;
+    _didInitialSetup = NO;
 }
 
 - (void)dealloc
 {
-    [self _unregisterClock];
+    if (_isRegistered) {
+        _isRegistered = NO;
+        if ([NSThread isMainThread]) {
+            _unregisterView(self);
+        } else {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                _stopDisplayLinkIfNeeded();
+            });
+        }
+    }
 }
 
 - (void)_registerClock
@@ -182,7 +259,7 @@ static void _unregisterView(GleamView *view) {
     const auto &newViewProps = *std::static_pointer_cast<GleamViewProps const>(props);
 
     if (oldViewProps.speed != newViewProps.speed) {
-        _speed = newViewProps.speed / 1000.0;
+        _speed = fmax(newViewProps.speed / 1000.0, 0.001);
     }
 
     if (oldViewProps.delay != newViewProps.delay) {
@@ -200,10 +277,6 @@ static void _unregisterView(GleamView *view) {
         else _transitionTypeValue = 0;
     }
 
-    if (oldViewProps.intensity != newViewProps.intensity) {
-        _intensity = fmin(fmax(newViewProps.intensity, 0.0), 1.0);
-    }
-
     if (oldViewProps.direction != newViewProps.direction) {
         auto dir = newViewProps.direction;
         if (dir == GleamViewDirection::Rtl) {
@@ -215,54 +288,73 @@ static void _unregisterView(GleamView *view) {
         }
     }
 
+    BOOL colorsChanged = NO;
+    if (oldViewProps.intensity != newViewProps.intensity) {
+        _intensity = fmin(fmax(newViewProps.intensity, 0.0), 1.0);
+        colorsChanged = YES;
+    }
+
     if (oldViewProps.baseColor != newViewProps.baseColor) {
         UIColor *color = RCTUIColorFromSharedColor(newViewProps.baseColor);
         _baseColor = color ?: [UIColor colorWithRed:0.878 green:0.878 blue:0.878 alpha:1.0];
+        colorsChanged = YES;
     }
 
     if (oldViewProps.highlightColor != newViewProps.highlightColor) {
         UIColor *color = RCTUIColorFromSharedColor(newViewProps.highlightColor);
         _highlightColor = color ?: [UIColor colorWithRed:0.961 green:0.961 blue:0.961 alpha:1.0];
+        colorsChanged = YES;
     }
 
     if (oldViewProps.loading != newViewProps.loading) {
         _loading = newViewProps.loading;
     }
 
-    [self _updateShimmerColors];
-    [self _applyLoadingState];
+    if (!_didInitialSetup) {
+        _didInitialSetup = YES;
+        [self _updateShimmerColors];
+        if (_loading) {
+            _wasLoading = YES;
+            [self _applyLoadingState];
+        } else {
+            _wasLoading = NO;
+            _contentAlpha = 1.0;
+            _lastSetChildrenAlpha = 1.0;
+            _shimmerOpacity = 0.0;
+        }
+    } else {
+        if (colorsChanged) {
+            [self _updateShimmerColors];
+        }
+        if (oldViewProps.loading != newViewProps.loading) {
+            [self _applyLoadingState];
+        }
+    }
 
     [super updateProps:props oldProps:oldProps];
 }
 
 #pragma mark - Private
 
-/**
- * Compute shimmer progress from global time.
- * All views with same speed/delay share the same progress value.
- * Uses cosine easing for smooth looping (matches AccelerateDecelerateInterpolator).
- */
-- (CGFloat)_computeProgress
+- (CGFloat)_computeProgressWithTime:(CFTimeInterval)now
 {
-    CFTimeInterval time = CACurrentMediaTime();
-    CGFloat effectiveTime = fmax(time - _delay, 0.0);
+    CGFloat effectiveTime = fmax(now - _delay, 0.0);
     CGFloat rawProgress = fmod(effectiveTime, _speed) / _speed;
-    // Cosine easing: (1 - cos(rawProgress * PI)) / 2
     return (1.0 - cos(rawProgress * M_PI)) / 2.0;
 }
 
-- (void)_tick
+- (void)_tickWithTime:(CFTimeInterval)now
 {
+    if (!self.window) return;
+
     if (_isTransitioning) {
         _transitionElapsed += _displayLink.duration;
-        CGFloat t = fmin(_transitionElapsed / _transitionDuration, 1.0);
-        // Ease out
+        CGFloat t = _transitionDuration > 0 ? fmin(_transitionElapsed / _transitionDuration, 1.0) : 1.0;
         CGFloat eased = 1.0 - (1.0 - t) * (1.0 - t);
 
         switch (_transitionTypeValue) {
-            case 1: { // Shrink — scale down with mask clipping
-                _contentAlpha = eased;
-                [self _setChildrenAlpha:_contentAlpha];
+            case 1: { // Shrink
+                [self _setChildrenAlphaIfNeeded:eased];
                 CGFloat shrinkOpacity = 1.0 - fmin(eased * 2.5, 1.0);
                 _shimmerLayer.opacity = shrinkOpacity;
                 CGFloat scale = 1.0 - eased * 0.5;
@@ -278,12 +370,17 @@ static void _unregisterView(GleamView *view) {
                     mask.actions = @{@"path": [NSNull null]};
                     _shimmerLayer.mask = mask;
                 }
-                mask.path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(x, y, fmax(w, 0.1), fmax(h, 0.1)) cornerRadius:self.layer.cornerRadius * scale].CGPath;
+                CGPathRef path = CGPathCreateWithRoundedRect(
+                    CGRectMake(x, y, fmax(w, 0.1), fmax(h, 0.1)),
+                    self.layer.cornerRadius * scale,
+                    self.layer.cornerRadius * scale,
+                    NULL);
+                mask.path = path;
+                CGPathRelease(path);
                 break;
             }
-            case 2: { // Collapse — vertically then horizontally via clip rect
-                _contentAlpha = eased;
-                [self _setChildrenAlpha:_contentAlpha];
+            case 2: { // Collapse
+                [self _setChildrenAlphaIfNeeded:eased];
                 CGFloat collapseOpacity = 1.0 - fmin(eased * 2.5, 1.0);
                 _shimmerLayer.opacity = collapseOpacity;
                 CGRect bounds = self.bounds;
@@ -294,44 +391,51 @@ static void _unregisterView(GleamView *view) {
                 CGFloat x = (bounds.size.width - w) / 2.0;
                 CGFloat y = (bounds.size.height - h) / 2.0;
 
-                // Use a mask layer to clip the shimmer to the collapsing rect
                 CAShapeLayer *mask = (CAShapeLayer *)_shimmerLayer.mask;
                 if (!mask) {
                     mask = [CAShapeLayer layer];
                     mask.actions = @{@"path": [NSNull null]};
                     _shimmerLayer.mask = mask;
                 }
-                mask.path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(x, y, fmax(w, 0.1), fmax(h, 0.1)) cornerRadius:self.layer.cornerRadius].CGPath;
+                CGPathRef path = CGPathCreateWithRoundedRect(
+                    CGRectMake(x, y, fmax(w, 0.1), fmax(h, 0.1)),
+                    self.layer.cornerRadius,
+                    self.layer.cornerRadius,
+                    NULL);
+                mask.path = path;
+                CGPathRelease(path);
                 break;
             }
             default: // Fade
-                _contentAlpha = eased;
-                [self _setChildrenAlpha:_contentAlpha];
+                [self _setChildrenAlphaIfNeeded:eased];
                 _shimmerOpacity = 1.0 - eased;
                 _shimmerLayer.opacity = _shimmerOpacity;
                 break;
         }
 
-        [self _updateGradientPosition];
+        [self _updateGradientPositionWithTime:now];
 
         if (t >= 1.0) {
             [self _finishTransition];
         }
     } else if (_loading) {
-        [self _updateGradientPosition];
+        [self _updateGradientPositionWithTime:now];
     }
 }
 
-- (void)_setChildrenAlpha:(CGFloat)alpha
+- (void)_setChildrenAlphaIfNeeded:(CGFloat)alpha
 {
+    if (fabs(alpha - _lastSetChildrenAlpha) < 0.005) return;
+    _lastSetChildrenAlpha = alpha;
+    _contentAlpha = alpha;
     for (UIView *subview in self.subviews) {
         subview.alpha = alpha;
     }
 }
 
-- (void)_updateGradientPosition
+- (void)_updateGradientPositionWithTime:(CFTimeInterval)now
 {
-    CGFloat progress = [self _computeProgress];
+    CGFloat progress = [self _computeProgressWithTime:now];
 
     CGPoint startPoint, endPoint;
 
@@ -365,8 +469,8 @@ static void _unregisterView(GleamView *view) {
 {
     UIColor *effectiveHighlight = _highlightColor;
     if (_intensity < 1.0) {
-        CGFloat br, bg, bb, ba;
-        CGFloat hr, hg, hb, ha;
+        CGFloat br = 0, bg = 0, bb = 0, ba = 1;
+        CGFloat hr = 0, hg = 0, hb = 0, ha = 1;
         [_baseColor getRed:&br green:&bg blue:&bb alpha:&ba];
         [_highlightColor getRed:&hr green:&hg blue:&hb alpha:&ha];
         CGFloat r = br + (hr - br) * _intensity;
@@ -381,7 +485,6 @@ static void _unregisterView(GleamView *view) {
         (id)effectiveHighlight.CGColor,
         (id)_baseColor.CGColor,
     ];
-    _shimmerLayer.locations = @[@0.0, @0.5, @1.0];
 }
 
 - (void)_applyLoadingState
@@ -389,13 +492,20 @@ static void _unregisterView(GleamView *view) {
     if (_loading) {
         _isTransitioning = NO;
         _contentAlpha = 0.0;
+        _lastSetChildrenAlpha = -1.0;
         _shimmerOpacity = 1.0;
-        [self _setChildrenAlpha:0.0];
+        for (UIView *subview in self.subviews) {
+            subview.alpha = 0.0;
+        }
+        _lastSetChildrenAlpha = 0.0;
         _shimmerLayer.opacity = 1.0;
+        _shimmerLayer.transform = CATransform3DIdentity;
+        _shimmerLayer.mask = nil;
         _shimmerLayer.frame = self.bounds;
         if (_shimmerLayer.superlayer != self.layer) {
             [self.layer addSublayer:_shimmerLayer];
         }
+        [self _updateShimmerColors];
         [self _registerClock];
         _wasLoading = YES;
     } else {
@@ -408,7 +518,12 @@ static void _unregisterView(GleamView *view) {
             [self _registerClock];
         } else {
             [self _unregisterClock];
-            [self _setChildrenAlpha:1.0];
+            _lastSetChildrenAlpha = -1.0;
+            for (UIView *subview in self.subviews) {
+                subview.alpha = 1.0;
+            }
+            _lastSetChildrenAlpha = 1.0;
+            _contentAlpha = 1.0;
             _shimmerLayer.opacity = 0.0;
             [_shimmerLayer removeFromSuperlayer];
             [self _emitTransitionEnd:YES];
@@ -420,13 +535,17 @@ static void _unregisterView(GleamView *view) {
 {
     _isTransitioning = NO;
     [self _unregisterClock];
-    [self _setChildrenAlpha:1.0];
+    _lastSetChildrenAlpha = -1.0;
+    for (UIView *subview in self.subviews) {
+        subview.alpha = 1.0;
+    }
+    _lastSetChildrenAlpha = 1.0;
+    _contentAlpha = 1.0;
     _shimmerLayer.opacity = 0.0;
     _shimmerLayer.transform = CATransform3DIdentity;
     _shimmerLayer.mask = nil;
     _shimmerLayer.frame = self.bounds;
     [_shimmerLayer removeFromSuperlayer];
-    [self _updateShimmerColors]; // Reset colors after dissolve
     [self _emitTransitionEnd:YES];
 }
 

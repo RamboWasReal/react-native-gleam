@@ -1,6 +1,6 @@
 {
   "name": "react-native-gleam",
-  "version": "1.0.0-beta.4.2",
+  "version": "1.0.0-beta.5",
   "description": "Native-powered shimmer loading effect for React Native",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
@@ -92,8 +92,8 @@
     "typescript": "^5.9.2"
   },
   "peerDependencies": {
-    "react": "*",
-    "react-native": "*"
+    "react": ">=18.0.0",
+    "react-native": ">=0.76.0"
   },
   "workspaces": [
     "example"

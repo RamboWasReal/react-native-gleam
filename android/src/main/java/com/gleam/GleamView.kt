@@ -5,8 +5,8 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
 import android.os.SystemClock
@@ -27,19 +27,24 @@ class GleamView(context: Context) : ReactViewGroup(context) {
     enum class Direction { LTR, RTL, TTB }
     enum class TransitionType { FADE, SHRINK, COLLAPSE }
 
+    private var didAttach = false
+    private var transitionGeneration = 0
+
     var loading: Boolean = true
         set(value) {
             if (field != value) {
                 val wasLoading = field
                 field = value
-                applyLoadingState(wasLoading)
+                if (didAttach) {
+                    applyLoadingState(wasLoading)
+                }
             }
         }
 
     var speed: Float = 1000f
         set(value) {
             if (field != value) {
-                field = value
+                field = value.coerceAtLeast(1f)
             }
         }
 
@@ -60,7 +65,7 @@ class GleamView(context: Context) : ReactViewGroup(context) {
     var transitionDuration: Float = 300f
         set(value) {
             if (field != value) {
-                field = value
+                field = value.coerceAtLeast(0f)
             }
         }
 
@@ -75,6 +80,7 @@ class GleamView(context: Context) : ReactViewGroup(context) {
         set(value) {
             if (field != value) {
                 field = value.coerceIn(0f, 1f)
+                invalidateGradientCache()
                 invalidate()
             }
         }
@@ -83,6 +89,7 @@ class GleamView(context: Context) : ReactViewGroup(context) {
         set(value) {
             if (field != value) {
                 field = value
+                invalidateGradientCache()
                 invalidate()
             }
         }
@@ -91,17 +98,14 @@ class GleamView(context: Context) : ReactViewGroup(context) {
         set(value) {
             if (field != value) {
                 field = value
+                invalidateGradientCache()
                 invalidate()
             }
         }
 
+    // Drawing objects — pre-allocated, reused every frame
     private val shimmerPaint = Paint()
-    private val gradientColors = IntArray(3)
-    private val gradientPositions = floatArrayOf(0f, 0.5f, 1f)
-    private val gradientCoords = FloatArray(4)
-    private val clipPath = Path()
-    private val clipRect = RectF()
-    internal var cornerRadius: Float = 0f
+    private val drawRect = RectF()
     private var transitionAnimator: ValueAnimator? = null
     private var shimmerOpacity: Float = 1f
     private var contentOpacity: Float = 0f
@@ -109,23 +113,53 @@ class GleamView(context: Context) : ReactViewGroup(context) {
     private var transitionProgress: Float = 0f
     private var isRegistered: Boolean = false
 
+    // Cached gradient — only recreated when colors change
+    private var cachedGradient: LinearGradient? = null
+    private val shaderMatrix = Matrix()
+    private var lastCachedBaseColor: Int = 0
+    private var lastCachedHighlight: Int = 0
+
+    // Cached corner radius in pixels — only recomputed when prop changes
+    internal var cornerRadius: Float = 0f
+        set(value) {
+            if (field != value) {
+                field = value
+                cornerRadiusPx = PixelUtil.toPixelFromDIP(value)
+            }
+        }
+    private var cornerRadiusPx: Float = 0f
+
     init {
         setWillNotDraw(false)
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        if (loading) {
-            registerClock()
+        if (!didAttach) {
+            didAttach = true
+            if (loading) {
+                registerClock()
+            } else {
+                contentOpacity = 1f
+                shimmerOpacity = 0f
+            }
+        } else {
+            // Re-attachment: restore correct state
+            if (loading) {
+                registerClock()
+            } else if (!isTransitioning) {
+                contentOpacity = 1f
+                shimmerOpacity = 0f
+            }
         }
     }
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         unregisterClock()
+        isTransitioning = false
         transitionAnimator?.cancel()
         transitionAnimator = null
-        isTransitioning = false
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -133,6 +167,14 @@ class GleamView(context: Context) : ReactViewGroup(context) {
         if (loading && w > 0 && h > 0 && !isRegistered) {
             registerClock()
         }
+    }
+
+    /** Called by ViewManager when the view is dropped */
+    fun cleanup() {
+        unregisterClock()
+        isTransitioning = false
+        transitionAnimator?.cancel()
+        transitionAnimator = null
     }
 
     private fun registerClock() {
@@ -149,22 +191,37 @@ class GleamView(context: Context) : ReactViewGroup(context) {
         }
     }
 
-    /** Called by SharedClock every frame */
-    fun onFrame() {
+    /** Called by SharedClock every frame with current timestamp */
+    internal var frameTimeMs: Float = 0f
+
+    internal fun onFrame(timeMs: Float) {
+        frameTimeMs = timeMs
         invalidate()
     }
 
-    /**
-     * Compute progress from global time.
-     * Uses cosine easing: progress = (1 - cos(phase)) / 2
-     * This matches AccelerateDecelerateInterpolator and ensures smooth looping.
-     */
+    private fun invalidateGradientCache() {
+        cachedGradient = null
+    }
+
     private fun computeProgress(): Float {
-        val timeMs = SystemClock.uptimeMillis().toFloat()
+        val timeMs = if (frameTimeMs > 0f) frameTimeMs else SystemClock.uptimeMillis().toFloat()
         val effectiveTime = (timeMs - delay).coerceAtLeast(0f)
         val rawProgress = (effectiveTime % speed) / speed
-        // AccelerateDecelerateInterpolator equivalent: (cos((x + 1) * PI) / 2) + 0.5
         return ((cos((rawProgress + 1.0) * PI) / 2.0) + 0.5).toFloat()
+    }
+
+    private fun ensureGradient(effectiveHighlight: Int) {
+        if (cachedGradient != null && lastCachedBaseColor == baseColor && lastCachedHighlight == effectiveHighlight) {
+            return
+        }
+        cachedGradient = LinearGradient(
+            0f, 0f, 1f, 0f,
+            intArrayOf(baseColor, effectiveHighlight, baseColor),
+            floatArrayOf(0f, 0.5f, 1f),
+            Shader.TileMode.CLAMP
+        )
+        lastCachedBaseColor = baseColor
+        lastCachedHighlight = effectiveHighlight
     }
 
     override fun dispatchDraw(canvas: Canvas) {
@@ -193,40 +250,37 @@ class GleamView(context: Context) : ReactViewGroup(context) {
                 highlightColor
             }
 
-            gradientColors[0] = baseColor
-            gradientColors[1] = effectiveHighlight
-            gradientColors[2] = baseColor
+            ensureGradient(effectiveHighlight)
+            val gradient = cachedGradient ?: return
 
+            // Position the gradient using a matrix instead of recreating it
             when (direction) {
                 Direction.LTR -> {
                     val size = w
                     val s = -size + (animationProgress * (w + 2 * size))
-                    gradientCoords[0] = s; gradientCoords[1] = 0f
-                    gradientCoords[2] = s + size; gradientCoords[3] = 0f
+                    shaderMatrix.setScale(size, h)
+                    shaderMatrix.postTranslate(s, 0f)
                 }
                 Direction.RTL -> {
                     val size = w
                     val s = w + size - (animationProgress * (w + 2 * size))
-                    gradientCoords[0] = s; gradientCoords[1] = 0f
-                    gradientCoords[2] = s - size; gradientCoords[3] = 0f
+                    shaderMatrix.setScale(-size, h)
+                    shaderMatrix.postTranslate(s, 0f)
                 }
                 Direction.TTB -> {
                     val size = h
                     val s = -size + (animationProgress * (h + 2 * size))
-                    gradientCoords[0] = 0f; gradientCoords[1] = s
-                    gradientCoords[2] = 0f; gradientCoords[3] = s + size
+                    shaderMatrix.setRotate(90f)
+                    shaderMatrix.postScale(w, size)
+                    shaderMatrix.postTranslate(0f, s)
                 }
             }
 
-            shimmerPaint.shader = LinearGradient(
-                gradientCoords[0], gradientCoords[1],
-                gradientCoords[2], gradientCoords[3],
-                gradientColors, gradientPositions,
-                Shader.TileMode.CLAMP
-            )
+            gradient.setLocalMatrix(shaderMatrix)
+            shimmerPaint.shader = gradient
             shimmerPaint.alpha = (shimmerOpacity * 255).toInt()
 
-            // Shrink: scale down, fade starts at 30%
+            // Shrink: scale down, fast opacity fade
             if (isTransitioning && transitionType == TransitionType.SHRINK) {
                 val scale = 1f - transitionProgress * 0.5f
                 val shrinkOpacity = (1f - transitionProgress * 2.5f).coerceAtLeast(0f)
@@ -235,7 +289,7 @@ class GleamView(context: Context) : ReactViewGroup(context) {
                 canvas.scale(scale, scale, w / 2f, h / 2f)
             }
 
-            // Collapse: vertically then horizontally, with opacity fade
+            // Collapse: vertically then horizontally, with fast opacity fade
             if (isTransitioning && transitionType == TransitionType.COLLAPSE) {
                 val p = transitionProgress
                 val scaleY = if (p < 0.6f) 1f - (p / 0.6f) * 0.98f else 0.02f
@@ -246,20 +300,15 @@ class GleamView(context: Context) : ReactViewGroup(context) {
                 canvas.scale(scaleX, scaleY, w / 2f, h / 2f)
             }
 
-            if (cornerRadius > 0f) {
-                val r = PixelUtil.toPixelFromDIP(cornerRadius)
-                val count = canvas.save()
-                clipPath.reset()
-                clipRect.set(0f, 0f, w, h)
-                clipPath.addRoundRect(clipRect, r, r, Path.Direction.CW)
-                canvas.clipPath(clipPath)
-                canvas.drawRect(0f, 0f, w, h, shimmerPaint)
-                canvas.restoreToCount(count)
+            // Draw shimmer — use drawRoundRect instead of clipPath for hardware acceleration
+            drawRect.set(0f, 0f, w, h)
+            if (cornerRadiusPx > 0f) {
+                canvas.drawRoundRect(drawRect, cornerRadiusPx, cornerRadiusPx, shimmerPaint)
             } else {
-                canvas.drawRect(0f, 0f, w, h, shimmerPaint)
+                canvas.drawRect(drawRect, shimmerPaint)
             }
 
-            // Restore scale/CRT transform
+            // Restore scale transform
             if (isTransitioning && (transitionType == TransitionType.SHRINK || transitionType == TransitionType.COLLAPSE)) {
                 canvas.restore()
             }
@@ -276,9 +325,12 @@ class GleamView(context: Context) : ReactViewGroup(context) {
 
     private fun applyLoadingState(wasLoading: Boolean) {
         if (loading) {
+            // Set isTransitioning=false BEFORE cancel to prevent stale onAnimationEnd
+            isTransitioning = false
+            transitionGeneration++
             transitionAnimator?.cancel()
             transitionAnimator = null
-            isTransitioning = false
+            transitionProgress = 0f
             contentOpacity = 0f
             shimmerOpacity = 1f
             registerClock()
@@ -286,12 +338,16 @@ class GleamView(context: Context) : ReactViewGroup(context) {
         } else {
             if (wasLoading && transitionDuration > 0f) {
                 isTransitioning = true
+                // Unregister from shared clock — the ValueAnimator drives redraws during transition
+                unregisterClock()
+                val currentGen = ++transitionGeneration
                 transitionAnimator?.cancel()
 
                 transitionAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
                     duration = transitionDuration.toLong()
-                    interpolator = DecelerateInterpolator()
+                    interpolator = DecelerateInterpolator(2f)
                     addUpdateListener { anim ->
+                        if (transitionGeneration != currentGen) return@addUpdateListener
                         val p = anim.animatedValue as Float
                         transitionProgress = p
                         contentOpacity = p
@@ -300,6 +356,7 @@ class GleamView(context: Context) : ReactViewGroup(context) {
                     }
                     addListener(object : android.animation.AnimatorListenerAdapter() {
                         override fun onAnimationEnd(animation: android.animation.Animator) {
+                            if (transitionGeneration != currentGen) return
                             finishTransition()
                         }
                     })
@@ -316,6 +373,7 @@ class GleamView(context: Context) : ReactViewGroup(context) {
     }
 
     private fun finishTransition() {
+        if (!isTransitioning) return
         isTransitioning = false
         unregisterClock()
         contentOpacity = 1f
@@ -350,11 +408,14 @@ class GleamView(context: Context) : ReactViewGroup(context) {
      * they compute progress from the same global timestamp.
      */
     companion object SharedClock {
-        private val views = mutableSetOf<GleamView>()
+        private val views = mutableListOf<GleamView>()
+        private val iterationSnapshot = mutableListOf<GleamView>()
         private var frameCallback: Choreographer.FrameCallback? = null
 
         fun register(view: GleamView) {
-            views.add(view)
+            if (!views.contains(view)) {
+                views.add(view)
+            }
             if (views.size == 1) start()
         }
 
@@ -364,8 +425,11 @@ class GleamView(context: Context) : ReactViewGroup(context) {
         }
 
         private fun start() {
-            frameCallback = Choreographer.FrameCallback { _ ->
-                views.toList().forEach { it.onFrame() }
+            frameCallback = Choreographer.FrameCallback { frameTimeNanos ->
+                val timeMs = frameTimeNanos / 1_000_000f
+                iterationSnapshot.clear()
+                iterationSnapshot.addAll(views)
+                iterationSnapshot.forEach { it.onFrame(timeMs) }
                 frameCallback?.let { Choreographer.getInstance().postFrameCallback(it) }
             }
             Choreographer.getInstance().postFrameCallback(frameCallback!!)

@@ -1,6 +1,6 @@
 import { Text } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
-import { GleamView, GleamDirection } from '../index';
+import { GleamView, GleamDirection, GleamTransition } from '../index';
 
 /**
  * The native component is mocked by react-native's jest preset as a host View.
@@ -162,6 +162,58 @@ describe('GleamDirection enum', () => {
     const values = Object.values(GleamDirection);
     expect(values).toHaveLength(3);
     expect(values).toEqual(expect.arrayContaining(['ltr', 'rtl', 'ttb']));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GleamTransition enum
+// ---------------------------------------------------------------------------
+describe('GleamTransition enum', () => {
+  it('Fade maps to fade', () => {
+    expect(GleamTransition.Fade).toBe('fade');
+  });
+
+  it('Shrink maps to shrink', () => {
+    expect(GleamTransition.Shrink).toBe('shrink');
+  });
+
+  it('Collapse maps to collapse', () => {
+    expect(GleamTransition.Collapse).toBe('collapse');
+  });
+
+  it('works as transitionType prop value', () => {
+    render(
+      <GleamView testID="gleam" transitionType={GleamTransition.Shrink} />
+    );
+    expect(getNativeProps().transitionType).toBe('shrink');
+  });
+
+  it('has exactly 3 values', () => {
+    const values = Object.values(GleamTransition);
+    expect(values).toHaveLength(3);
+    expect(values).toEqual(
+      expect.arrayContaining(['fade', 'shrink', 'collapse'])
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// transitionType prop
+// ---------------------------------------------------------------------------
+describe('transitionType prop', () => {
+  it('passes fade string', () => {
+    render(<GleamView testID="gleam" transitionType="fade" />);
+    expect(getNativeProps().transitionType).toBe('fade');
+  });
+
+  it('passes shrink string', () => {
+    render(<GleamView testID="gleam" transitionType="shrink" />);
+    expect(getNativeProps().transitionType).toBe('shrink');
+  });
+
+  it('passes collapse string', () => {
+    render(<GleamView testID="gleam" transitionType="collapse" />);
+    expect(getNativeProps().transitionType).toBe('collapse');
   });
 });
 
@@ -344,6 +396,13 @@ describe('exports', () => {
     expect(GleamDirection).toBeDefined();
     expect(Object.keys(GleamDirection)).toEqual(
       expect.arrayContaining(['LeftToRight', 'RightToLeft', 'TopToBottom'])
+    );
+  });
+
+  it('exports GleamTransition enum', () => {
+    expect(GleamTransition).toBeDefined();
+    expect(Object.keys(GleamTransition)).toEqual(
+      expect.arrayContaining(['Fade', 'Shrink', 'Collapse'])
     );
   });
 });
