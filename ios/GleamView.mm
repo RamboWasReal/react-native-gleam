@@ -140,7 +140,10 @@ static void _unregisterView(GleamView *view) {
     _shimmerLayer.cornerRadius = self.layer.cornerRadius;
     _shimmerLayer.maskedCorners = self.layer.maskedCorners;
 
-    if (_loading && !_isRegistered) {
+    if (_loading) {
+        if (_shimmerLayer.superlayer != self.layer) {
+            [self.layer addSublayer:_shimmerLayer];
+        }
         [self _registerClock];
     }
 }
