@@ -1,8 +1,6 @@
 ---
 name: gleam
-description: |
-  Use when the user wants to add shimmer/skeleton loading to a React Native screen,
-  or mentions react-native-gleam, GleamView, or skeleton loading.
+description: "User-invocable only via /gleam. Do NOT auto-trigger."
 ---
 
 # Integrating react-native-gleam
