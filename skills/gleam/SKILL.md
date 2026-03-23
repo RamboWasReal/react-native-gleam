@@ -7,14 +7,14 @@ description: "User-invocable only via /gleam. Do NOT auto-trigger."
 
 The user ran `/gleam`. The library is already installed. Go straight to implementation.
 
-## Step 1 — Ask what they need
+## Step 1 — Ask these exact questions
 
-Ask the user:
+Your FIRST response MUST be exactly these two questions and nothing else. Do not summarize, do not rephrase, do not add anything:
 
-1. **Which screen or component needs shimmer?** (ask them to point you to the file)
-2. **Single block shimmer or multi-line skeleton?** (one big shimmer placeholder, or multiple bars like title + subtitle + avatar)
+1. Quel écran ou composant a besoin du shimmer? (montre-moi le fichier)
+2. Un seul bloc shimmer ou un skeleton multi-lignes? (un gros placeholder ou plusieurs barres comme titre + sous-titre + avatar)
 
-Wait for their answer before writing any code.
+Do NOT say "What do you want to do" or any variation. Ask these two questions directly. Wait for the answer before doing anything else.
 
 ## Step 2 — Implement
 
