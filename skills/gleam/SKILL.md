@@ -3,24 +3,20 @@ name: gleam
 description: "User-invocable only via /gleam. Do NOT auto-trigger."
 ---
 
-# react-native-gleam setup
+IMPORTANT: The library is ALREADY INSTALLED. Do NOT ask what the user wants to do. Do NOT offer a menu of options. Do NOT ask if they want to install.
 
-The user ran `/gleam`. The library is already installed. Go straight to implementation.
-
-## Step 1 — Ask these exact questions
-
-Your FIRST response MUST be exactly these two questions and nothing else. Do not summarize, do not rephrase, do not add anything:
+Your FIRST response must be ONLY these two questions, word for word:
 
 1. Which screen or component needs shimmer? (point me to the file)
 2. Single block shimmer or multi-line skeleton? (one big placeholder, or multiple bars like title + subtitle + avatar)
 
-Do NOT say "What do you want to do" or any variation. Ask these two questions directly. Wait for the answer before doing anything else.
+Say NOTHING else. No intro, no preamble, no "I see you're on branch X", no options list. Just the two questions above.
 
-## Step 2 — Implement
+---
 
-Based on their answer, implement the shimmer using the reference below.
+# Implementation Guide (use AFTER the user answers)
 
-### Single block shimmer
+## Single block shimmer
 
 Wrap existing content. When `loading={true}`, children are hidden and shimmer plays. When `loading={false}`, shimmer transitions out and children appear.
 
@@ -35,7 +31,7 @@ import { GleamView } from 'react-native-gleam';
 </GleamView>
 ```
 
-### Multi-line skeleton (`GleamView.Line`)
+## Multi-line skeleton (`GleamView.Line`)
 
 Each `GleamView.Line` renders its own shimmer bar. Lines inherit shimmer props from the parent. No conditional rendering needed.
 
@@ -56,9 +52,7 @@ Each `GleamView.Line` renders its own shimmer bar. Lines inherit shimmer props f
 - Place Lines as direct children (or inside fragments) for best performance
 - Use `onTransitionEnd` on individual Lines, not the parent
 
-## Step 3 — Customization
-
-After the basic implementation is in place, ask if they want:
+## After implementation, ask about customization
 
 - **Stagger effect?** → Use `delay` prop to offset each shimmer
 - **Custom colors?** → `baseColor` and `highlightColor` props
