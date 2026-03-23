@@ -1,0 +1,18 @@
+{
+  "name": "react-native-gleam",
+  "description": "Claude Code plugin for react-native-gleam — native shimmer/skeleton loading",
+  "owner": {
+    "name": "David Boutin"
+  },
+  "plugins": [
+    {
+      "name": "react-native-gleam",
+      "description": "Skill for integrating react-native-gleam into a React Native project (Fabric)",
+      "version": "1.0.0",
+      "source": "./",
+      "author": {
+        "name": "David Boutin"
+      }
+    }
+  ]
+}
