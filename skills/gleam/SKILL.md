@@ -1,46 +1,47 @@
 ---
 name: gleam
-description: "Invoked via /gleam — guides integration of react-native-gleam into a React Native project"
+description: |
+  Use when the user wants to add shimmer/skeleton loading to a React Native screen,
+  or mentions react-native-gleam, GleamView, or skeleton loading.
 ---
 
-# Using react-native-gleam
+# Integrating react-native-gleam
 
-## Overview
+## Your Role
 
-`react-native-gleam` is a native shimmer/skeleton loading component for React Native. All animation runs in native code (no JS animation runtime). Fabric-only.
+You are guiding the user through integrating `react-native-gleam` into their React Native project. **Do not dump all information at once.** Ask questions to understand their needs, then provide targeted guidance.
 
-## When to Use
+## Step 1 — Understand the context
 
-- Adding shimmer/skeleton loading to a React Native screen
-- Building multi-line skeleton layouts
-- Transitioning from loading state to content
+Before writing any code, ask the user:
 
-## Installation
+1. **What screen/component needs shimmer?** (ask to see the file or describe it)
+2. **Single block or multi-line skeleton?** (one big shimmer vs multiple skeleton bars like a card with title + subtitle + avatar)
+3. **Is `react-native-gleam` already installed?** (check their `package.json` if you have access)
+
+Wait for answers before proceeding.
+
+## Step 2 — Install if needed
+
+If not installed:
 
 ```bash
+# Bare React Native
 yarn add react-native-gleam
-# or
-npm install react-native-gleam
-```
+cd ios && pod install
 
-**Bare React Native:** Run `pod install` in `ios/`. Android requires no setup — autolinking handles it.
-
-**Expo:** Requires a development build (not Expo Go).
-```bash
+# Expo (requires development build, not Expo Go)
 npx expo install react-native-gleam
 npx expo prebuild
 ```
 
-## Requirements
+Requirements: React 19+, React Native 0.78+ (Fabric/New Architecture), iOS 15+, Android SDK 24+.
 
-- React 19+
-- React Native 0.78+ (New Architecture / Fabric)
-- iOS 15+
-- Android SDK 24+
+## Step 3 — Implement based on their answers
 
-## Basic Usage — Single Block Shimmer
+### Single block shimmer
 
-Wrap content in `GleamView`. When `loading={true}`, children are hidden and a shimmer plays. When `loading={false}`, shimmer transitions out and children appear.
+Wrap the content. When `loading={true}`, children are hidden and shimmer plays. When `loading={false}`, shimmer transitions out and children appear.
 
 ```tsx
 import { GleamView } from 'react-native-gleam';
@@ -53,67 +54,35 @@ import { GleamView } from 'react-native-gleam';
 </GleamView>
 ```
 
-## Multi-line Skeleton — `GleamView.Line`
+### Multi-line skeleton (`GleamView.Line`)
 
-Use `GleamView.Line` for individual shimmer bars. Lines inherit shimmer props from the parent. No conditional rendering needed.
+Each `GleamView.Line` renders its own shimmer bar. Lines inherit shimmer props from the parent. No conditional rendering needed.
 
 ```tsx
-import { GleamView } from 'react-native-gleam';
-
 <GleamView loading={isLoading} speed={800}>
   <GleamView.Line style={{ height: 22, borderRadius: 6, width: '70%' }}>
-    <Text style={{ fontSize: 16 }}>{title}</Text>
+    <Text>{title}</Text>
   </GleamView.Line>
-  <GleamView.Line
-    style={{ height: 16, borderRadius: 4, width: '50%' }}
-    delay={100}
-  >
-    <Text style={{ fontSize: 13 }}>{subtitle}</Text>
+  <GleamView.Line style={{ height: 16, borderRadius: 4, width: '50%' }} delay={100}>
+    <Text>{subtitle}</Text>
   </GleamView.Line>
 </GleamView>
 ```
 
-**Key rules:**
+**Key rules for Lines:**
 - Lines inherit `loading`, `speed`, `direction`, `baseColor`, `highlightColor`, `intensity`, `transitionDuration`, `transitionType` from parent
 - `delay` and `onTransitionEnd` are per-line
-- Place Lines as direct children of `GleamView` (or inside fragments) for best performance
-- When Lines are present, the parent renders as a plain `View` — use `onTransitionEnd` on individual Lines, not the parent
+- Place Lines as direct children (or inside fragments) for best performance
+- Use `onTransitionEnd` on individual Lines, not the parent
 
-## Stagger Pattern
+## Step 4 — Ask about customization
 
-Use `delay` to offset shimmer cycles:
+After the basic implementation works, ask:
 
-```tsx
-<GleamView loading delay={0} style={styles.row} />
-<GleamView loading delay={150} style={styles.row} />
-<GleamView loading delay={300} style={styles.row} />
-```
-
-Or with Lines:
-
-```tsx
-<GleamView loading>
-  <GleamView.Line style={styles.line} delay={0} />
-  <GleamView.Line style={styles.line} delay={100} />
-  <GleamView.Line style={styles.line} delay={200} />
-</GleamView>
-```
-
-## Enums
-
-```tsx
-import { GleamDirection, GleamTransition } from 'react-native-gleam';
-
-// Directions
-GleamDirection.LeftToRight  // 'ltr' (default)
-GleamDirection.RightToLeft  // 'rtl'
-GleamDirection.TopToBottom  // 'ttb'
-
-// Transitions
-GleamTransition.Fade      // 'fade' (default) — opacity crossfade
-GleamTransition.Shrink    // 'shrink' — shimmer scales down while fading
-GleamTransition.Collapse  // 'collapse' — shimmer collapses vertically then horizontally
-```
+- **Want a stagger effect?** → Use `delay` prop to offset each shimmer
+- **Custom colors to match your theme?** → `baseColor` and `highlightColor` props
+- **Specific transition style?** → `GleamTransition.Fade` (default), `.Shrink`, or `.Collapse`
+- **Need to know when loading finishes?** → `onTransitionEnd` callback
 
 ## Props Reference
 
@@ -132,8 +101,6 @@ GleamTransition.Collapse  // 'collapse' — shimmer collapses vertically then ho
 | `highlightColor` | `ColorValue` | `#F5F5F5` | Color of the moving highlight |
 | `onTransitionEnd` | `function` | — | Called with `{ nativeEvent: { finished: boolean } }` |
 
-All `View` props are also supported (`style`, `testID`, etc.).
-
 ### GleamView.Line
 
 | Prop | Type | Default | Description |
@@ -143,7 +110,19 @@ All `View` props are also supported (`style`, `testID`, etc.).
 | `onTransitionEnd` | `function` | — | Called when this line's transition completes |
 | `testID` | `string` | — | Test identifier |
 
-Accessibility props are accepted directly. Shimmer props are inherited from parent `GleamView`.
+### Enums
+
+```tsx
+import { GleamDirection, GleamTransition } from 'react-native-gleam';
+
+GleamDirection.LeftToRight  // 'ltr' (default)
+GleamDirection.RightToLeft  // 'rtl'
+GleamDirection.TopToBottom  // 'ttb'
+
+GleamTransition.Fade      // 'fade' — opacity crossfade
+GleamTransition.Shrink    // 'shrink' — scales down while fading
+GleamTransition.Collapse  // 'collapse' — collapses vertically then horizontally
+```
 
 ## Common Mistakes
 
@@ -151,6 +130,6 @@ Accessibility props are accepted directly. Shimmer props are inherited from pare
 |---------|-----|
 | Using with Expo Go | Requires a development build (`npx expo prebuild`) |
 | Using with old architecture (Paper) | Fabric only — enable New Architecture |
-| Passing `onTransitionEnd` on parent when Lines present | Use `onTransitionEnd` on individual Lines instead |
-| Expecting per-corner `borderRadius` on shimmer | Only uniform `borderRadius` is applied to the shimmer overlay |
-| Wrapping Lines in intermediate `<View>` | Works but requires an extra render cycle — prefer direct children or fragments |
+| Passing `onTransitionEnd` on parent when Lines present | Use `onTransitionEnd` on individual Lines |
+| Expecting per-corner `borderRadius` on shimmer | Only uniform `borderRadius` is applied |
+| Wrapping Lines in intermediate `<View>` | Works but extra render cycle — prefer direct children or fragments |
