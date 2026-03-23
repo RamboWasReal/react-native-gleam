@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-03-22
+
+### Fixed
+
+- Android: clamp `blendColor` RGBA channels to 0–255
+- Android: clear animator listeners before cancel on detach/cleanup
+- Android: snapshot SharedClock views list before frame iteration
+- iOS: null check after `calloc` in shared clock buffer allocation
+- iOS: guard against NaN/Infinity in `speed`, `delay`, `transitionDuration`
+
+### Added
+
+- JSDoc with `@default` tags on all NativeProps and GleamLineProps
+- Claude Code plugin with `/gleam` setup command
+
 ## [1.0.0] - 2026-03-22
 
 First stable release.

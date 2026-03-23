@@ -8,7 +8,7 @@
     {
       "name": "react-native-gleam",
       "description": "Skill for integrating react-native-gleam into a React Native project (Fabric)",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "./",
       "author": {
         "name": "David Boutin"
