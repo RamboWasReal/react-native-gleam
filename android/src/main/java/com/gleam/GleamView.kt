@@ -319,10 +319,10 @@ class GleamView(context: Context) : ReactViewGroup(context) {
     }
 
     private fun blendColor(from: Int, to: Int, ratio: Float): Int {
-        val r = Color.red(from) + ((Color.red(to) - Color.red(from)) * ratio).toInt()
-        val g = Color.green(from) + ((Color.green(to) - Color.green(from)) * ratio).toInt()
-        val b = Color.blue(from) + ((Color.blue(to) - Color.blue(from)) * ratio).toInt()
-        val a = Color.alpha(from) + ((Color.alpha(to) - Color.alpha(from)) * ratio).toInt()
+        val r = (Color.red(from) + ((Color.red(to) - Color.red(from)) * ratio).toInt()).coerceIn(0, 255)
+        val g = (Color.green(from) + ((Color.green(to) - Color.green(from)) * ratio).toInt()).coerceIn(0, 255)
+        val b = (Color.blue(from) + ((Color.blue(to) - Color.blue(from)) * ratio).toInt()).coerceIn(0, 255)
+        val a = (Color.alpha(from) + ((Color.alpha(to) - Color.alpha(from)) * ratio).toInt()).coerceIn(0, 255)
         return Color.argb(a, r, g, b)
     }
 

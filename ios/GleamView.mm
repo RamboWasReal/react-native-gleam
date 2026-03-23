@@ -51,6 +51,7 @@ static void _registerView(GleamView *view) {
     if (_viewCount >= _viewCapacity) {
         NSUInteger newCap = _viewCapacity == 0 ? 16 : _viewCapacity * 2;
         GleamView * __strong *newBuf = (GleamView * __strong *)calloc(newCap, sizeof(GleamView *));
+        if (!newBuf) return;
         if (_views) {
             for (NSUInteger i = 0; i < _viewCount; i++) {
                 newBuf[i] = _views[i];
@@ -263,15 +264,18 @@ static void _unregisterView(GleamView *view) {
     const auto &newViewProps = *std::static_pointer_cast<GleamViewProps const>(props);
 
     if (oldViewProps.speed != newViewProps.speed) {
-        _speed = fmax(newViewProps.speed / 1000.0, 0.001);
+        double s = newViewProps.speed / 1000.0;
+        _speed = (isnan(s) || isinf(s) || s <= 0) ? 1.0 : fmax(s, 0.001);
     }
 
     if (oldViewProps.delay != newViewProps.delay) {
-        _delay = newViewProps.delay / 1000.0;
+        double d = newViewProps.delay / 1000.0;
+        _delay = (isnan(d) || isinf(d)) ? 0.0 : d;
     }
 
     if (oldViewProps.transitionDuration != newViewProps.transitionDuration) {
-        _transitionDuration = newViewProps.transitionDuration / 1000.0;
+        double td = newViewProps.transitionDuration / 1000.0;
+        _transitionDuration = (isnan(td) || isinf(td) || td < 0) ? 0.3 : td;
     }
 
     if (oldViewProps.transitionType != newViewProps.transitionType) {
