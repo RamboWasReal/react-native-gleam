@@ -159,6 +159,7 @@ class GleamView(context: Context) : ReactViewGroup(context) {
         super.onDetachedFromWindow()
         unregisterClock()
         isTransitioning = false
+        transitionAnimator?.removeAllListeners()
         transitionAnimator?.cancel()
         transitionAnimator = null
     }
@@ -174,6 +175,7 @@ class GleamView(context: Context) : ReactViewGroup(context) {
     fun cleanup() {
         unregisterClock()
         isTransitioning = false
+        transitionAnimator?.removeAllListeners()
         transitionAnimator?.cancel()
         transitionAnimator = null
     }
@@ -432,9 +434,9 @@ class GleamView(context: Context) : ReactViewGroup(context) {
         private fun start() {
             frameCallback = Choreographer.FrameCallback { frameTimeNanos ->
                 val timeMs = frameTimeNanos / 1_000_000f
-                // Reverse index iteration — safe if onFrame triggers unregister (shrinks tail)
-                for (i in views.indices.reversed()) {
-                    views[i].onFrame(timeMs)
+                val snapshot = views.toList()
+                for (i in snapshot.indices.reversed()) {
+                    snapshot[i].onFrame(timeMs)
                 }
                 frameCallback?.let { Choreographer.getInstance().postFrameCallback(it) }
             }

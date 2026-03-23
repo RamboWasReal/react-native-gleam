@@ -20,7 +20,7 @@ npm install react-native-gleam
 
 ### Bare React Native
 
-Run `pod install` in your `ios/` directory.
+Run `pod install` in your `ios/` directory. Android requires no additional setup — autolinking and codegen handle everything.
 
 ### Expo
 
@@ -119,8 +119,8 @@ Every `GleamView` provides context to its subtree. A `GleamView.Line` always bin
 | `transitionDuration` | `number` | `300` | Duration of the transition from shimmer to content (ms). `0` = instant |
 | `transitionType` | `GleamTransition` | `Fade` | Transition style when loading ends |
 | `intensity` | `number` | `1` | Highlight strength (0-1). Lower = more subtle shimmer |
-| `baseColor` | `string` | `#E0E0E0` | Background color of the shimmer |
-| `highlightColor` | `string` | `#F5F5F5` | Color of the moving highlight |
+| `baseColor` | `ColorValue` | `#E0E0E0` | Background color of the shimmer |
+| `highlightColor` | `ColorValue` | `#F5F5F5` | Color of the moving highlight |
 | `onTransitionEnd` | `function` | — | Called when the transition completes or is interrupted. Receives `{ nativeEvent: { finished: boolean } }` — `true` if completed, `false` if interrupted (e.g., `loading` toggled back to `true`) |
 
 All standard `View` props are also supported (`style`, `testID`, etc.). Note: the shimmer overlay supports uniform `borderRadius` only — per-corner radii are not applied to the shimmer.
@@ -183,13 +183,15 @@ All shimmer instances sharing the same `speed` are automatically synchronized vi
 
 The shimmer respects uniform `borderRadius` and standard view styles.
 
-## Breaking changes (beta)
-
-- When `GleamView.Line` children are present, the parent `GleamView` renders as a plain `View` container. `onTransitionEnd` on the parent is ignored in this mode — use `onTransitionEnd` on individual `GleamView.Line` components instead. A dev warning is emitted if this happens.
-
 ## Limitations
 
 - The shimmer overlay supports uniform `borderRadius` only — per-corner radii are not applied to the shimmer.
+
+## Contributing with Claude Code
+
+This project includes a [Claude Code](https://claude.ai/code) skill in `skills/gleam-dev.md` that guides AI-assisted development. It covers adding props (4-layer sync: codegen → JS → iOS → Android), modifying native code, testing patterns, and common pitfalls.
+
+Claude Code automatically discovers skills in the `skills/` directory. When working on this project, the skill activates contextually — no manual setup needed.
 
 ## License
 

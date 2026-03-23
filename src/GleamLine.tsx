@@ -10,9 +10,12 @@ import { GleamContext } from './GleamContext';
 
 export interface GleamLineProps extends AccessibilityProps {
   children?: ReactNode;
+  /** Style for the shimmer bar (height, width, borderRadius, etc.). */
   style?: StyleProp<ViewStyle>;
   testID?: string;
+  /** Phase offset in milliseconds — overrides the parent's delay for this line. */
   delay?: NativeProps['delay'];
+  /** Called when this line's transition completes or is interrupted. */
   onTransitionEnd?: NativeProps['onTransitionEnd'];
 }
 

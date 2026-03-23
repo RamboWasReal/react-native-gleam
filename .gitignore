@@ -85,6 +85,9 @@ android/generated
 # React Native Nitro Modules
 nitrogen/
 
+# Test coverage
+coverage/
+
 # Claude Code
 CLAUDE.md
 .claude/
