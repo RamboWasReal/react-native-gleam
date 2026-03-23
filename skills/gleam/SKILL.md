@@ -3,41 +3,22 @@ name: gleam
 description: "User-invocable only via /gleam. Do NOT auto-trigger."
 ---
 
-# Setting up react-native-gleam
+# react-native-gleam setup
 
-The user ran `/gleam`. They want to set up react-native-gleam in their project. Start immediately.
+The user ran `/gleam`. The library is already installed. Go straight to implementation.
 
-## Step 1 — Check their project
+## Step 1 — Ask what they need
 
-Do these checks yourself silently (do NOT ask the user):
+Ask the user:
 
-1. Read their `package.json` to check if `react-native-gleam` is already installed
-2. Check if they use Expo (`expo` in dependencies) or bare React Native
-3. Check their React and React Native versions
-
-## Step 2 — Install
-
-If not installed, install it:
-
-- **Bare React Native:** `yarn add react-native-gleam` then `cd ios && pod install`
-- **Expo:** `npx expo install react-native-gleam` then `npx expo prebuild`
-
-Requirements: React 19+, React Native 0.78+ (Fabric/New Architecture), iOS 15+, Android SDK 24+. If their versions don't meet requirements, warn them.
-
-If already installed, skip to Step 3.
-
-## Step 3 — Ask what they need
-
-Now ask the user:
-
-1. **Which screen or component needs shimmer loading?** (ask them to point you to the file)
+1. **Which screen or component needs shimmer?** (ask them to point you to the file)
 2. **Single block shimmer or multi-line skeleton?** (one big shimmer placeholder, or multiple bars like title + subtitle + avatar)
 
 Wait for their answer before writing any code.
 
-## Step 4 — Implement
+## Step 2 — Implement
 
-Based on their answer, implement the shimmer. Use the reference below.
+Based on their answer, implement the shimmer using the reference below.
 
 ### Single block shimmer
 
@@ -75,7 +56,7 @@ Each `GleamView.Line` renders its own shimmer bar. Lines inherit shimmer props f
 - Place Lines as direct children (or inside fragments) for best performance
 - Use `onTransitionEnd` on individual Lines, not the parent
 
-## Step 5 — Customization
+## Step 3 — Customization
 
 After the basic implementation is in place, ask if they want:
 
