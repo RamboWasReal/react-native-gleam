@@ -11,8 +11,8 @@ The user ran `/gleam`. The library is already installed. Go straight to implemen
 
 Your FIRST response MUST be exactly these two questions and nothing else. Do not summarize, do not rephrase, do not add anything:
 
-1. Quel écran ou composant a besoin du shimmer? (montre-moi le fichier)
-2. Un seul bloc shimmer ou un skeleton multi-lignes? (un gros placeholder ou plusieurs barres comme titre + sous-titre + avatar)
+1. Which screen or component needs shimmer? (point me to the file)
+2. Single block shimmer or multi-line skeleton? (one big placeholder, or multiple bars like title + subtitle + avatar)
 
 Do NOT say "What do you want to do" or any variation. Ask these two questions directly. Wait for the answer before doing anything else.
 
