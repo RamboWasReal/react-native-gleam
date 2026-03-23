@@ -33,6 +33,10 @@ npx expo prebuild
 
 No config plugin needed — autolinking and codegen handle everything.
 
+### Claude Code
+
+This project includes a [Claude Code](https://claude.ai/code) skill in `skills/gleam-dev.md`. It covers adding props across all 4 layers (codegen → JS → iOS → Android), native code patterns, and common pitfalls. The skill activates automatically when working in this repo.
+
 ## Usage
 
 ```tsx
@@ -186,12 +190,6 @@ The shimmer respects uniform `borderRadius` and standard view styles.
 ## Limitations
 
 - The shimmer overlay supports uniform `borderRadius` only — per-corner radii are not applied to the shimmer.
-
-## Contributing with Claude Code
-
-This project includes a [Claude Code](https://claude.ai/code) skill in `skills/gleam-dev.md` that guides AI-assisted development. It covers adding props (4-layer sync: codegen → JS → iOS → Android), modifying native code, testing patterns, and common pitfalls.
-
-Claude Code automatically discovers skills in the `skills/` directory. When working on this project, the skill activates contextually — no manual setup needed.
 
 ## License
 
