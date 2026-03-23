@@ -7,17 +7,41 @@ When the user runs /gleam, follow these steps in order:
 
 ## Step 1 — Scan the codebase
 
-Search the project for loading patterns that could use shimmer:
-- Loading states (`isLoading`, `loading`, `fetching`, `pending`)
-- Loading indicators (`ActivityIndicator`, `Spinner`, `Skeleton`, `Placeholder`, `LinearProgress`)
-- Conditional rendering based on loading (`loading ? <X> : <Y>`, `if (loading)`)
-- Empty state placeholders
+Search the ENTIRE project for anything that could be replaced by shimmer loading. Be thorough — check every screen, component, and hook. Look for:
 
-List every file and line where you find a candidate. Present them as a numbered list like:
+**Existing skeleton/shimmer libraries:**
+- `moti/skeleton` (`MotiSkeletonGroup`, `Skeleton`)
+- `react-native-skeleton-placeholder` (`SkeletonPlaceholder`)
+- `react-native-shimmer-placeholder` (`ShimmerPlaceholder`)
+- `@rneui/themed` or `react-native-elements` (`Skeleton`, `LinearProgress`)
+- `react-content-loader` (`ContentLoader`)
+- Any other skeleton/shimmer/placeholder imports
+
+**Reanimated-based loading animations:**
+- `react-native-reanimated` used for shimmer/pulse/fade loading effects
+- Custom `Animated.View` opacity loops for loading states
+- `MotiView` with repeating animations for loading
+
+**Native loading indicators:**
+- `ActivityIndicator` from react-native
+- `Spinner` components
+- Custom loading spinners/indicators
+
+**Loading state patterns:**
+- `isLoading`, `loading`, `fetching`, `pending`, `isFetching` state variables
+- Conditional rendering: `loading ? <Placeholder> : <Content>`
+- `if (loading) return <X>`
+- TanStack Query / SWR / Apollo `loading` states
+
+**Empty state placeholders:**
+- Placeholder views shown before data loads
+- Dummy/mock data rendered during loading
+
+List EVERY candidate found. Present as a numbered list:
 
 1. `src/screens/HomeScreen.tsx:42` — `ActivityIndicator` while fetching user data
-2. `src/screens/ProfileScreen.tsx:18` — conditional render `loading ? null : <Content>`
-3. `src/components/CardList.tsx:55` — `Skeleton` placeholder from another library
+2. `src/screens/ProfileScreen.tsx:18` — `MotiSkeletonGroup` from moti/skeleton
+3. `src/components/CardList.tsx:55` — reanimated opacity loop for loading shimmer
 
 ## Step 2 — Let the user pick
 
