@@ -3,43 +3,45 @@ name: gleam
 description: "User-invocable only via /gleam. Do NOT auto-trigger."
 ---
 
-# Integrating react-native-gleam
+# Setting up react-native-gleam
 
-## Your Role
+The user ran `/gleam`. They want to set up react-native-gleam in their project. Start immediately.
 
-You are guiding the user through integrating `react-native-gleam` into their React Native project. **Do not dump all information at once.** Ask questions to understand their needs, then provide targeted guidance.
+## Step 1 — Check their project
 
-## Step 1 — Understand the context
+Do these checks yourself silently (do NOT ask the user):
 
-Before writing any code, ask the user:
+1. Read their `package.json` to check if `react-native-gleam` is already installed
+2. Check if they use Expo (`expo` in dependencies) or bare React Native
+3. Check their React and React Native versions
 
-1. **What screen/component needs shimmer?** (ask to see the file or describe it)
-2. **Single block or multi-line skeleton?** (one big shimmer vs multiple skeleton bars like a card with title + subtitle + avatar)
-3. **Is `react-native-gleam` already installed?** (check their `package.json` if you have access)
+## Step 2 — Install
 
-Wait for answers before proceeding.
+If not installed, install it:
 
-## Step 2 — Install if needed
+- **Bare React Native:** `yarn add react-native-gleam` then `cd ios && pod install`
+- **Expo:** `npx expo install react-native-gleam` then `npx expo prebuild`
 
-If not installed:
+Requirements: React 19+, React Native 0.78+ (Fabric/New Architecture), iOS 15+, Android SDK 24+. If their versions don't meet requirements, warn them.
 
-```bash
-# Bare React Native
-yarn add react-native-gleam
-cd ios && pod install
+If already installed, skip to Step 3.
 
-# Expo (requires development build, not Expo Go)
-npx expo install react-native-gleam
-npx expo prebuild
-```
+## Step 3 — Ask what they need
 
-Requirements: React 19+, React Native 0.78+ (Fabric/New Architecture), iOS 15+, Android SDK 24+.
+Now ask the user:
 
-## Step 3 — Implement based on their answers
+1. **Which screen or component needs shimmer loading?** (ask them to point you to the file)
+2. **Single block shimmer or multi-line skeleton?** (one big shimmer placeholder, or multiple bars like title + subtitle + avatar)
+
+Wait for their answer before writing any code.
+
+## Step 4 — Implement
+
+Based on their answer, implement the shimmer. Use the reference below.
 
 ### Single block shimmer
 
-Wrap the content. When `loading={true}`, children are hidden and shimmer plays. When `loading={false}`, shimmer transitions out and children appear.
+Wrap existing content. When `loading={true}`, children are hidden and shimmer plays. When `loading={false}`, shimmer transitions out and children appear.
 
 ```tsx
 import { GleamView } from 'react-native-gleam';
@@ -73,14 +75,14 @@ Each `GleamView.Line` renders its own shimmer bar. Lines inherit shimmer props f
 - Place Lines as direct children (or inside fragments) for best performance
 - Use `onTransitionEnd` on individual Lines, not the parent
 
-## Step 4 — Ask about customization
+## Step 5 — Customization
 
-After the basic implementation works, ask:
+After the basic implementation is in place, ask if they want:
 
-- **Want a stagger effect?** → Use `delay` prop to offset each shimmer
-- **Custom colors to match your theme?** → `baseColor` and `highlightColor` props
-- **Specific transition style?** → `GleamTransition.Fade` (default), `.Shrink`, or `.Collapse`
-- **Need to know when loading finishes?** → `onTransitionEnd` callback
+- **Stagger effect?** → Use `delay` prop to offset each shimmer
+- **Custom colors?** → `baseColor` and `highlightColor` props
+- **Transition style?** → `GleamTransition.Fade` (default), `.Shrink`, or `.Collapse`
+- **Callback when loading finishes?** → `onTransitionEnd`
 
 ## Props Reference
 
