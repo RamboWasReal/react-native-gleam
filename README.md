@@ -35,7 +35,9 @@ No config plugin needed — autolinking and codegen handle everything.
 
 ### Claude Code
 
-This project includes a [Claude Code](https://claude.ai/code) skill in `skills/gleam-dev.md`. It covers adding props across all 4 layers (codegen → JS → iOS → Android), native code patterns, and common pitfalls. The skill activates automatically when working in this repo.
+```sh
+claude plugin add --from github:RamboWasReal/react-native-gleam
+```
 
 ## Usage
 
