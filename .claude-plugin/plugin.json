@@ -1,7 +1,7 @@
 {
   "name": "react-native-gleam",
   "description": "Claude Code skill for integrating react-native-gleam — native shimmer/skeleton loading for React Native (Fabric)",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": {
     "name": "David Boutin"
   },
