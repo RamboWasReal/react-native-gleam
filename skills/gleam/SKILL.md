@@ -1,10 +1,6 @@
 ---
 name: gleam
-description: |
-  Use when integrating react-native-gleam into a React Native project.
-  Covers installation, GleamView usage, GleamView.Line multi-line skeletons,
-  transitions, stagger patterns, and common pitfalls.
-  Fabric-only (New Architecture).
+description: "Invoked via /gleam — guides integration of react-native-gleam into a React Native project"
 ---
 
 # Using react-native-gleam

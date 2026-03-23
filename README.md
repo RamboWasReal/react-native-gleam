@@ -35,7 +35,7 @@ No config plugin needed — autolinking and codegen handle everything.
 
 ### Claude Code
 
-Install the plugin to help Claude guide your first implementation — it knows every prop, pattern, and pitfall.
+Install the plugin, then use `/gleam` to get guided through your first implementation.
 
 ```sh
 claude plugin marketplace add RamboWasReal/react-native-gleam
