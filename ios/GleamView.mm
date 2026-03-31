@@ -182,6 +182,11 @@ static void _unregisterView(GleamView *view) {
             [self.layer addSublayer:_shimmerLayer];
         }
         [self _registerClock];
+    } else if (!_isTransitioning) {
+        [self _setChildrenAlphaIfNeeded:1.0];
+        _shimmerLayer.opacity = 0.0;
+        [_shimmerLayer removeFromSuperlayer];
+        [self _unregisterClock];
     }
 }
 
