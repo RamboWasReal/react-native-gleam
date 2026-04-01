@@ -190,6 +190,28 @@ static void _unregisterView(GleamView *view) {
     }
 }
 
+- (void)didMoveToWindow
+{
+    [super didMoveToWindow];
+    if (!self.window) return;
+
+    // View (re)joined a window — resync visual state.
+    // Mirrors Android's onAttachedToWindow re-attachment path.
+    if (_loading) {
+        if (_shimmerLayer.superlayer != self.layer) {
+            [self.layer addSublayer:_shimmerLayer];
+        }
+        [self _registerClock];
+    } else if (!_isTransitioning) {
+        // _isTransitioning=YES means ticks are actively driving it to
+        // completion (we no longer bail on !self.window) — let it finish.
+        [self _setChildrenAlphaIfNeeded:1.0];
+        _shimmerLayer.opacity = 0.0;
+        [_shimmerLayer removeFromSuperlayer];
+        [self _unregisterClock];
+    }
+}
+
 - (void)removeFromSuperview
 {
     [self _unregisterClock];
@@ -362,8 +384,10 @@ static void _unregisterView(GleamView *view) {
 
 - (void)_tickWithTime:(CFTimeInterval)now
 {
-    if (!self.window) return;
-
+    // Transitions must always complete to avoid stuck visual state when the
+    // view is hidden (display:'none' → hidden=YES) or has no window.
+    // Cost is bounded (≤ transitionDuration) and the ops are cheap property sets.
+    // Shimmer animation is cosmetic and unbounded — skip when not visible.
     if (_isTransitioning) {
         _transitionElapsed += _displayLink.duration;
         CGFloat t = _transitionDuration > 0 ? fmin(_transitionElapsed / _transitionDuration, 1.0) : 1.0;
@@ -436,6 +460,7 @@ static void _unregisterView(GleamView *view) {
             [self _finishTransition];
         }
     } else if (_loading) {
+        if (!self.window) return;
         [self _updateGradientPositionWithTime:now];
     }
 }
