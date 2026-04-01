@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-03-31
+
+### Fixed
+
+- iOS: resync visual state after `display: 'none'` and window changes — Fabric maps `display: 'none'` to `UIView.hidden=YES` without triggering `layoutSubviews`, so the v1.0.3 fix was insufficient (#4)
+- iOS: let loading transitions complete even when the view is hidden or has no window, preventing stuck shimmer state after security lock overlays or app background/foreground cycles
+- iOS: add `didMoveToWindow` handler to resync state on window re-attachment, mirroring Android's existing `onAttachedToWindow` path
+
 ## [1.0.3] - 2026-03-31
 
 ### Fixed
