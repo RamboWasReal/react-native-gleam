@@ -11,6 +11,7 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.os.SystemClock
 import android.view.Choreographer
+import android.view.View
 import android.view.animation.DecelerateInterpolator
 import androidx.annotation.UiThread
 import com.facebook.react.bridge.Arguments
@@ -168,6 +169,22 @@ class GleamView(context: Context) : ReactViewGroup(context) {
         super.onSizeChanged(w, h, oldw, oldh)
         if (loading && w > 0 && h > 0 && !isRegistered) {
             registerClock()
+        }
+    }
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        if (!didAttach) return
+
+        if (visibility == VISIBLE) {
+            if (loading) {
+                registerClock()
+                invalidate()
+            } else if (!isTransitioning) {
+                contentOpacity = 1f
+                shimmerOpacity = 0f
+                invalidate()
+            }
         }
     }
 

@@ -26,6 +26,7 @@ static GleamView * __strong *_views = NULL;
 static NSUInteger _viewCount = 0;
 static NSUInteger _viewCapacity = 0;
 static CADisplayLink *_displayLink;
+static void *kHiddenKVOContext = &kHiddenKVOContext;
 
 static void _startDisplayLinkIfNeeded(void) {
     if (_displayLink) return;
@@ -103,6 +104,7 @@ static void _unregisterView(GleamView *view) {
     CGFloat _contentAlpha;
     CGFloat _lastSetChildrenAlpha;
     BOOL _didInitialSetup;
+    BOOL _isObservingHidden;
 }
 
 + (ComponentDescriptorProvider)componentDescriptorProvider
@@ -158,6 +160,9 @@ static void _unregisterView(GleamView *view) {
             @"transform": [NSNull null],
         };
         _shimmerLayer.locations = @[@0.0, @0.5, @1.0];
+
+        [self addObserver:self forKeyPath:@"hidden" options:NSKeyValueObservingOptionOld | NSKeyValueObservingOptionNew context:kHiddenKVOContext];
+        _isObservingHidden = YES;
     }
     return self;
 }
@@ -236,6 +241,10 @@ static void _unregisterView(GleamView *view) {
 
 - (void)prepareForRecycle
 {
+    if (_isObservingHidden) {
+        [self removeObserver:self forKeyPath:@"hidden" context:kHiddenKVOContext];
+        _isObservingHidden = NO;
+    }
     [super prepareForRecycle];
     [self _unregisterClock];
     _isTransitioning = NO;
@@ -249,6 +258,9 @@ static void _unregisterView(GleamView *view) {
     _loading = YES;
     _wasLoading = YES;
     _didInitialSetup = NO;
+
+    [self addObserver:self forKeyPath:@"hidden" options:NSKeyValueObservingOptionOld | NSKeyValueObservingOptionNew context:kHiddenKVOContext];
+    _isObservingHidden = YES;
 }
 
 // Invariant: a registered view (_isRegistered=YES) is held by the static
@@ -259,6 +271,10 @@ static void _unregisterView(GleamView *view) {
 // by the display link on the main thread. The view leaks in _views but no crash.
 - (void)dealloc
 {
+    if (_isObservingHidden) {
+        _isObservingHidden = NO;
+        [self removeObserver:self forKeyPath:@"hidden" context:kHiddenKVOContext];
+    }
     if (_isRegistered) {
         _isRegistered = NO;
         if ([NSThread isMainThread]) {
@@ -374,6 +390,36 @@ static void _unregisterView(GleamView *view) {
 }
 
 #pragma mark - Private
+
+- (void)observeValueForKeyPath:(NSString *)keyPath
+                      ofObject:(id)object
+                        change:(NSDictionary<NSKeyValueChangeKey,id> *)change
+                       context:(void *)context
+{
+    if (context != kHiddenKVOContext) {
+        [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
+        return;
+    }
+
+    BOOL wasHidden = [change[NSKeyValueChangeOldKey] boolValue];
+    BOOL isHidden = [change[NSKeyValueChangeNewKey] boolValue];
+
+    if (wasHidden && !isHidden) {
+        // hidden YES→NO: ancestor removed display:'none' — resync visual state
+        if (_loading) {
+            if (_shimmerLayer.superlayer != self.layer) {
+                [self.layer addSublayer:_shimmerLayer];
+            }
+            [self _registerClock];
+        } else if (!_isTransitioning) {
+            [self _setChildrenAlphaIfNeeded:1.0];
+            _shimmerOpacity = 0.0;
+            _shimmerLayer.opacity = 0.0;
+            [_shimmerLayer removeFromSuperlayer];
+            [self _unregisterClock];
+        }
+    }
+}
 
 - (CGFloat)_computeProgressWithTime:(CFTimeInterval)now
 {
