@@ -3,7 +3,7 @@
 Native-powered shimmer loading effect for React Native. Built with pure native animations — no reanimated, no SVG, zero dependencies.
 
 - **iOS**: `CAGradientLayer` + `CADisplayLink`
-- **Android**: `Choreographer` + `LinearGradient`
+- **Android**: `Choreographer` + `LinearGradient` + `ValueAnimator`
 - **Fabric only** (New Architecture)
 
 https://github.com/user-attachments/assets/70eb886c-f3e2-4611-8ecc-0b03227267d0

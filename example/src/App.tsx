@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { StyleSheet, Text, Pressable, ScrollView, View } from 'react-native';
+import {
+  FlatList,
+  StyleSheet,
+  Text,
+  Pressable,
+  ScrollView,
+  View,
+} from 'react-native';
 import { GleamView, GleamDirection, GleamTransition } from 'react-native-gleam';
 
 const DIRECTIONS: { label: string; value: GleamDirection }[] = [
@@ -14,6 +21,12 @@ const COLOR_PRESETS = [
   { label: 'Warm', base: '#F5E6D3', highlight: '#FDF2E9' },
   { label: 'Purple', base: '#E8DAEF', highlight: '#F4ECF7' },
 ];
+
+const RECYCLE_ITEMS = Array.from({ length: 40 }, (_, index) => ({
+  id: `recycle-${index}`,
+  label: `Cell ${index + 1}`,
+  initials: String(index + 1).padStart(2, '0'),
+}));
 
 function Stepper({
   label,
@@ -313,6 +326,55 @@ export default function App() {
         ))}
       </View>
 
+      <Text style={styles.sectionLabel}>FlatList recycling</Text>
+      <FlatList
+        horizontal
+        data={RECYCLE_ITEMS}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item, index }) => {
+          const itemLoading = loading && index % 3 !== 0;
+
+          return (
+            <View style={styles.recycleItem}>
+              <GleamView
+                loading={itemLoading}
+                speed={speed}
+                intensity={intensity}
+                direction={direction}
+                baseColor={colors.base}
+                highlightColor={colors.highlight}
+                transitionDuration={transitionDuration}
+                transitionType={transitionType}
+                style={styles.recycleAvatar}
+              >
+                <View style={styles.recycleAvatarContent}>
+                  <Text style={styles.recycleAvatarText}>{item.initials}</Text>
+                </View>
+              </GleamView>
+              <GleamView
+                loading={itemLoading}
+                speed={speed}
+                intensity={intensity}
+                direction={direction}
+                baseColor={colors.base}
+                highlightColor={colors.highlight}
+                transitionDuration={transitionDuration}
+                transitionType={transitionType}
+                style={styles.recycleLabel}
+              >
+                <Text style={styles.recycleLabelText}>{item.label}</Text>
+              </GleamView>
+            </View>
+          );
+        }}
+        contentContainerStyle={styles.recycleList}
+        showsHorizontalScrollIndicator={false}
+        initialNumToRender={6}
+        maxToRenderPerBatch={4}
+        removeClippedSubviews
+        windowSize={3}
+      />
+
       <Pressable style={styles.button} onPress={() => setLoading((v) => !v)}>
         <Text style={styles.buttonText}>
           {loading ? 'Stop Loading' : 'Start Loading'}
@@ -556,6 +618,48 @@ const styles = StyleSheet.create({
   cardText: {
     fontSize: 14,
     padding: 12,
+  },
+  recycleList: {
+    gap: 10,
+    paddingBottom: 24,
+  },
+  recycleItem: {
+    width: 112,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    gap: 10,
+  },
+  recycleAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignSelf: 'center',
+  },
+  recycleAvatarContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 32,
+    backgroundColor: '#1F2937',
+  },
+  recycleAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  recycleLabel: {
+    height: 22,
+    borderRadius: 6,
+    justifyContent: 'center',
+  },
+  recycleLabelText: {
+    color: '#333',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   button: {
     alignSelf: 'center',

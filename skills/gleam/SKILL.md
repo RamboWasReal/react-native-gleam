@@ -84,6 +84,8 @@ Key rules:
 - Lines inherit shimmer props from parent. `delay` and `onTransitionEnd` are per-line
 - Place Lines as direct children or inside fragments
 - Use `onTransitionEnd` on individual Lines, not the parent
+- In `FlatList`/`VirtualizedList` cells, keep the wrapper pattern and make `loading` reflect the absence of stable content, not background refetching. For example, with server-state data use `loading={isPending && !data}` instead of `loading={isFetching}` so recycled cells do not re-enable shimmer over already loaded content.
+- When adding or debugging list usage, validate with the example app's `FlatList recycling` section by scrolling enough to recycle cells, toggling loading, and confirming loaded content remains visible after cells reattach.
 
 ## Props Reference
 

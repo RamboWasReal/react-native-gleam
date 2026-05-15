@@ -172,6 +172,8 @@ static void _unregisterView(GleamView *view) {
     [super mountChildComponentView:childComponentView index:index];
     if (_loading || _isTransitioning) {
         childComponentView.alpha = _contentAlpha;
+    } else {
+        childComponentView.alpha = 1.0;
     }
 }
 
@@ -188,10 +190,7 @@ static void _unregisterView(GleamView *view) {
         }
         [self _registerClock];
     } else if (!_isTransitioning) {
-        [self _setChildrenAlphaIfNeeded:1.0];
-        _shimmerLayer.opacity = 0.0;
-        [_shimmerLayer removeFromSuperlayer];
-        [self _unregisterClock];
+        [self _forceLoadedState];
     }
 }
 
@@ -210,10 +209,7 @@ static void _unregisterView(GleamView *view) {
     } else if (!_isTransitioning) {
         // _isTransitioning=YES means ticks are actively driving it to
         // completion (we no longer bail on !self.window) — let it finish.
-        [self _setChildrenAlphaIfNeeded:1.0];
-        _shimmerLayer.opacity = 0.0;
-        [_shimmerLayer removeFromSuperlayer];
-        [self _unregisterClock];
+        [self _forceLoadedState];
     }
 }
 
@@ -303,63 +299,57 @@ static void _unregisterView(GleamView *view) {
 
 - (void)updateProps:(Props::Shared const &)props oldProps:(Props::Shared const &)oldProps
 {
-    const auto &oldViewProps = *std::static_pointer_cast<GleamViewProps const>(_props);
     const auto &newViewProps = *std::static_pointer_cast<GleamViewProps const>(props);
 
-    if (oldViewProps.speed != newViewProps.speed) {
-        double s = newViewProps.speed / 1000.0;
-        _speed = (isnan(s) || isinf(s) || s <= 0) ? 1.0 : fmax(s, 0.001);
-    }
+    // Fabric can recycle a native component without changing the JS props for
+    // the next cell. prepareForRecycle resets internal state, so every update
+    // must resync from the new props instead of relying only on old/new prop
+    // diffs. This keeps FlatList-recycled cells from staying in shimmer mode
+    // when the recycled JS prop is still loading=false.
+    double s = newViewProps.speed / 1000.0;
+    _speed = (isnan(s) || isinf(s) || s <= 0) ? 1.0 : fmax(s, 0.001);
 
-    if (oldViewProps.delay != newViewProps.delay) {
-        double d = newViewProps.delay / 1000.0;
-        _delay = (isnan(d) || isinf(d)) ? 0.0 : d;
-    }
+    double d = newViewProps.delay / 1000.0;
+    _delay = (isnan(d) || isinf(d)) ? 0.0 : d;
 
-    if (oldViewProps.transitionDuration != newViewProps.transitionDuration) {
-        double td = newViewProps.transitionDuration / 1000.0;
-        _transitionDuration = (isnan(td) || isinf(td) || td < 0) ? 0.3 : td;
-    }
+    double td = newViewProps.transitionDuration / 1000.0;
+    _transitionDuration = (isnan(td) || isinf(td) || td < 0) ? 0.3 : td;
 
-    if (oldViewProps.transitionType != newViewProps.transitionType) {
-        auto tt = newViewProps.transitionType;
-        if (tt == GleamViewTransitionType::Shrink) _transitionTypeValue = 1;
-        else if (tt == GleamViewTransitionType::Collapse) _transitionTypeValue = 2;
-        else _transitionTypeValue = 0;
-    }
+    auto tt = newViewProps.transitionType;
+    if (tt == GleamViewTransitionType::Shrink) _transitionTypeValue = 1;
+    else if (tt == GleamViewTransitionType::Collapse) _transitionTypeValue = 2;
+    else _transitionTypeValue = 0;
 
-    if (oldViewProps.direction != newViewProps.direction) {
-        auto dir = newViewProps.direction;
-        if (dir == GleamViewDirection::Rtl) {
-            _direction = GleamDirectionRTL;
-        } else if (dir == GleamViewDirection::Ttb) {
-            _direction = GleamDirectionTTB;
-        } else {
-            _direction = GleamDirectionLTR;
-        }
+    auto dir = newViewProps.direction;
+    if (dir == GleamViewDirection::Rtl) {
+        _direction = GleamDirectionRTL;
+    } else if (dir == GleamViewDirection::Ttb) {
+        _direction = GleamDirectionTTB;
+    } else {
+        _direction = GleamDirectionLTR;
     }
 
     BOOL colorsChanged = NO;
-    if (oldViewProps.intensity != newViewProps.intensity) {
-        _intensity = fmin(fmax(newViewProps.intensity, 0.0), 1.0);
+    CGFloat nextIntensity = fmin(fmax(newViewProps.intensity, 0.0), 1.0);
+    if (_intensity != nextIntensity) {
         colorsChanged = YES;
     }
+    _intensity = nextIntensity;
 
-    if (oldViewProps.baseColor != newViewProps.baseColor) {
-        UIColor *color = RCTUIColorFromSharedColor(newViewProps.baseColor);
-        _baseColor = color ?: [UIColor colorWithRed:0.878 green:0.878 blue:0.878 alpha:1.0];
+    UIColor *baseColor = RCTUIColorFromSharedColor(newViewProps.baseColor) ?: [UIColor colorWithRed:0.878 green:0.878 blue:0.878 alpha:1.0];
+    if (![_baseColor isEqual:baseColor]) {
         colorsChanged = YES;
     }
+    _baseColor = baseColor;
 
-    if (oldViewProps.highlightColor != newViewProps.highlightColor) {
-        UIColor *color = RCTUIColorFromSharedColor(newViewProps.highlightColor);
-        _highlightColor = color ?: [UIColor colorWithRed:0.961 green:0.961 blue:0.961 alpha:1.0];
+    UIColor *highlightColor = RCTUIColorFromSharedColor(newViewProps.highlightColor) ?: [UIColor colorWithRed:0.961 green:0.961 blue:0.961 alpha:1.0];
+    if (![_highlightColor isEqual:highlightColor]) {
         colorsChanged = YES;
     }
+    _highlightColor = highlightColor;
 
-    if (oldViewProps.loading != newViewProps.loading) {
-        _loading = newViewProps.loading;
-    }
+    BOOL loadingChanged = _loading != newViewProps.loading;
+    _loading = newViewProps.loading;
 
     if (!_didInitialSetup) {
         _didInitialSetup = YES;
@@ -369,20 +359,16 @@ static void _unregisterView(GleamView *view) {
             [self _applyLoadingState];
         } else {
             _wasLoading = NO;
-            _contentAlpha = 1.0;
-            _shimmerOpacity = 0.0;
-            _lastSetChildrenAlpha = -1.0;
-            for (UIView *subview in self.subviews) {
-                subview.alpha = 1.0;
-            }
-            _lastSetChildrenAlpha = 1.0;
+            [self _forceLoadedState];
         }
     } else {
         if (colorsChanged) {
             [self _updateShimmerColors];
         }
-        if (oldViewProps.loading != newViewProps.loading) {
+        if (loadingChanged) {
             [self _applyLoadingState];
+        } else if (!_loading && !_isTransitioning) {
+            [self _forceLoadedState];
         }
     }
 
@@ -412,11 +398,7 @@ static void _unregisterView(GleamView *view) {
             }
             [self _registerClock];
         } else if (!_isTransitioning) {
-            [self _setChildrenAlphaIfNeeded:1.0];
-            _shimmerOpacity = 0.0;
-            _shimmerLayer.opacity = 0.0;
-            [_shimmerLayer removeFromSuperlayer];
-            [self _unregisterClock];
+            [self _forceLoadedState];
         }
     }
 }
@@ -608,18 +590,29 @@ static void _unregisterView(GleamView *view) {
             _transitionElapsed = 0.0;
             [self _registerClock];
         } else {
-            [self _unregisterClock];
-            _lastSetChildrenAlpha = -1.0;
-            for (UIView *subview in self.subviews) {
-                subview.alpha = 1.0;
-            }
-            _lastSetChildrenAlpha = 1.0;
-            _contentAlpha = 1.0;
-            _shimmerLayer.opacity = 0.0;
-            [_shimmerLayer removeFromSuperlayer];
+            [self _forceLoadedState];
             [self _emitTransitionEnd:YES];
         }
     }
+}
+
+- (void)_forceLoadedState
+{
+    if (_isTransitioning) {
+        _isTransitioning = NO;
+    }
+    [self _unregisterClock];
+    _lastSetChildrenAlpha = -1.0;
+    for (UIView *subview in self.subviews) {
+        subview.alpha = 1.0;
+    }
+    _lastSetChildrenAlpha = 1.0;
+    _contentAlpha = 1.0;
+    _shimmerOpacity = 0.0;
+    _shimmerLayer.opacity = 0.0;
+    _shimmerLayer.transform = CATransform3DIdentity;
+    _shimmerLayer.mask = nil;
+    [_shimmerLayer removeFromSuperlayer];
 }
 
 - (void)_finishTransition
