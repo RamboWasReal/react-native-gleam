@@ -142,16 +142,14 @@ class GleamView(context: Context) : ReactViewGroup(context) {
             if (loading) {
                 registerClock()
             } else {
-                contentOpacity = 1f
-                shimmerOpacity = 0f
+                forceLoadedState()
             }
         } else {
             // Re-attachment: restore correct state
             if (loading) {
                 registerClock()
             } else if (!isTransitioning) {
-                contentOpacity = 1f
-                shimmerOpacity = 0f
+                forceLoadedState()
             }
         }
     }
@@ -181,9 +179,7 @@ class GleamView(context: Context) : ReactViewGroup(context) {
                 registerClock()
                 invalidate()
             } else if (!isTransitioning) {
-                contentOpacity = 1f
-                shimmerOpacity = 0f
-                invalidate()
+                forceLoadedState()
             }
         }
     }
@@ -386,22 +382,28 @@ class GleamView(context: Context) : ReactViewGroup(context) {
                     start()
                 }
             } else {
-                unregisterClock()
-                contentOpacity = 1f
-                shimmerOpacity = 0f
-                invalidate()
+                forceLoadedState()
                 emitTransitionEnd(true)
             }
         }
     }
 
-    private fun finishTransition() {
-        if (!isTransitioning) return
+    private fun forceLoadedState() {
         isTransitioning = false
+        transitionGeneration++
+        transitionAnimator?.removeAllListeners()
+        transitionAnimator?.cancel()
+        transitionAnimator = null
         unregisterClock()
+        transitionProgress = 1f
         contentOpacity = 1f
         shimmerOpacity = 0f
         invalidate()
+    }
+
+    private fun finishTransition() {
+        if (!isTransitioning) return
+        forceLoadedState()
         emitTransitionEnd(true)
     }
 
