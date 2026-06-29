@@ -202,6 +202,21 @@ When `loading={true}`, `GleamView` and `GleamView.Line` automatically set `acces
 
 When the system **Reduce Motion** setting is enabled, shimmer animation is replaced by a static `baseColor` placeholder — no native animation runs until content loads.
 
+## Example app
+
+The [`example/`](example/) app includes interactive demos for all props plus:
+
+- **Reduce Motion** — live status banner (toggle in system accessibility settings)
+- **Wrapped Lines** — `GleamView.Line` nested inside a `<View>` wrapper
+- **Accessibility** — `accessibilityLabel` / `accessibilityRole` on lines; `accessibilityState.busy` while loading
+
+Run from the repo root:
+
+```sh
+yarn example start
+yarn example ios    # or: yarn example android
+```
+
 ## License
 
 MIT

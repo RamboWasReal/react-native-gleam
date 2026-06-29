@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Accessibility: set `accessibilityState.busy` automatically while `loading={true}`
 - Reduce Motion: render a static `baseColor` skeleton when the system setting is enabled (no shimmer animation)
 - DEV warning when `loading` is omitted but `children` are present (defaults to `true`)
+- Example app: Reduce Motion banner, wrapped Lines demo, accessibility labels
 
 ### Changed
 
