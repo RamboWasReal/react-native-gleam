@@ -3,6 +3,24 @@ import { Text, View } from 'react-native';
 import { act, render, screen } from '@testing-library/react-native';
 import { GleamView, GleamDirection, GleamTransition } from '../index';
 
+jest.mock('../useReduceMotion', () => ({
+  useReduceMotion: jest.fn(() => false),
+}));
+
+import { useReduceMotion } from '../useReduceMotion';
+
+const mockUseReduceMotion = useReduceMotion as jest.MockedFunction<
+  typeof useReduceMotion
+>;
+
+beforeEach(() => {
+  mockUseReduceMotion.mockReturnValue(false);
+});
+
+afterEach(() => {
+  jest.clearAllMocks();
+});
+
 /**
  * The native component is mocked by react-native's jest preset as a host View.
  * We inspect the props passed to it to verify JS-level prop resolution.
@@ -246,6 +264,13 @@ describe('onTransitionEnd', () => {
     const handler = jest.fn();
     render(<GleamView testID="gleam" onTransitionEnd={handler} />);
     expect(getNativeProps().onTransitionEnd).toBeDefined();
+  });
+
+  it('invokes onTransitionEnd when the native event fires', () => {
+    const handler = jest.fn();
+    render(<GleamView testID="gleam" onTransitionEnd={handler} />);
+    getNativeProps().onTransitionEnd({ nativeEvent: { finished: true } });
+    expect(handler).toHaveBeenCalledWith({ nativeEvent: { finished: true } });
   });
 
   it('does not pass callback when not provided', () => {
@@ -1005,9 +1030,9 @@ describe('GleamView.Line ref stability', () => {
     expect(mountCalls).toHaveLength(1);
   });
 
-  it('ref re-fires when Lines are inside an intermediate wrapper', () => {
+  it('ref is stable on first render with Lines inside an intermediate wrapper', () => {
     function Wrapper({ children }: { children: React.ReactNode }) {
-      return <>{children}</>;
+      return <View>{children}</View>;
     }
 
     const refCalls: unknown[] = [];
@@ -1025,12 +1050,8 @@ describe('GleamView.Line ref stability', () => {
       </GleamView>
     );
 
-    // Wrapper is not a Fragment, so hasLineChildren can't detect Lines
-    // synchronously. First render is NativeGleamView, then useLayoutEffect
-    // registers the Line and flips to View → ref receives two instances.
-    // This is a known limitation documented here.
     const mountCalls = refCalls.filter((n) => n !== null);
-    expect(mountCalls).toHaveLength(2);
+    expect(mountCalls).toHaveLength(1);
   });
 });
 
@@ -1069,6 +1090,117 @@ describe('GleamView.Line outside parent', () => {
     );
     expect(spy).toHaveBeenCalledWith(
       'GleamView.Line must be used inside a GleamView'
+    );
+    spy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Accessibility
+// ---------------------------------------------------------------------------
+describe('accessibility', () => {
+  it('sets accessibilityState.busy while loading', () => {
+    render(<GleamView testID="gleam" loading={true} />);
+    expect(getNativeProps().accessibilityState).toEqual({ busy: true });
+  });
+
+  it('preserves existing accessibilityState while loading', () => {
+    render(
+      <GleamView
+        testID="gleam"
+        loading={true}
+        accessibilityState={{ disabled: true }}
+      />
+    );
+    expect(getNativeProps().accessibilityState).toEqual({
+      disabled: true,
+      busy: true,
+    });
+  });
+
+  it('does not force busy when loading=false', () => {
+    render(<GleamView testID="gleam" loading={false} />);
+    expect(getNativeProps().accessibilityState).toBeUndefined();
+  });
+
+  it('sets busy on GleamView.Line while loading', () => {
+    render(
+      <GleamView loading={true}>
+        <GleamView.Line testID="line">
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+    expect(screen.getByTestId('line').props.accessibilityState).toEqual({
+      busy: true,
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reduce motion
+// ---------------------------------------------------------------------------
+describe('reduce motion', () => {
+  it('renders a static skeleton instead of the native shimmer', () => {
+    mockUseReduceMotion.mockReturnValue(true);
+
+    render(
+      <GleamView testID="gleam" loading={true} baseColor="#ABCDEF">
+        <Text>Content</Text>
+      </GleamView>
+    );
+
+    const view = screen.getByTestId('gleam');
+    expect(view.props.loading).toBeUndefined();
+    expect(view.props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ backgroundColor: '#ABCDEF' }),
+      ])
+    );
+  });
+
+  it('uses native shimmer again when reduce motion is disabled', () => {
+    mockUseReduceMotion.mockReturnValue(false);
+
+    render(<GleamView testID="gleam" loading={true} />);
+    expect(getNativeProps().loading).toBe(true);
+  });
+
+  it('renders static GleamView.Line bars when reduce motion is enabled', () => {
+    mockUseReduceMotion.mockReturnValue(true);
+
+    render(
+      <GleamView loading={true} baseColor="#ABCDEF">
+        <GleamView.Line testID="line" style={{ height: 20 }}>
+          <Text>Content</Text>
+        </GleamView.Line>
+      </GleamView>
+    );
+
+    const line = screen.getByTestId('line');
+    expect(line.props.loading).toBeUndefined();
+    expect(line.props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ backgroundColor: '#ABCDEF' }),
+        expect.objectContaining({ height: 20 }),
+      ])
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DEV warnings
+// ---------------------------------------------------------------------------
+describe('DEV warnings', () => {
+  it('warns when loading is omitted but children are present', () => {
+    const spy = jest.spyOn(console, 'warn').mockImplementation();
+    render(
+      <GleamView testID="gleam">
+        <Text>Content</Text>
+      </GleamView>
+    );
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining('loading defaults to true')
     );
     spy.mockRestore();
   });

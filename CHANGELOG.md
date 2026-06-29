@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Accessibility: set `accessibilityState.busy` automatically while `loading={true}`
+- Reduce Motion: render a static `baseColor` skeleton when the system setting is enabled (no shimmer animation)
+- DEV warning when `loading` is omitted but `children` are present (defaults to `true`)
+
+### Changed
+
+- `GleamView.Line` nested inside intermediate wrappers (e.g. `<View>`) is detected on the first render — stable ref, no NativeGleamView→View flip
+
+### Fixed
+
+- CI: add missing CocoaPods cache step referenced by the iOS build job
+
 ## [1.0.6] - 2026-05-15
 
 ### Fixed

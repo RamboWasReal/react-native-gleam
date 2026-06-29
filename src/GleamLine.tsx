@@ -7,6 +7,11 @@ import {
 } from 'react-native';
 import NativeGleamView, { type NativeProps } from './GleamViewNativeComponent';
 import { GleamContext } from './GleamContext';
+import {
+  gleamAccessibilityState,
+  gleamStyles,
+  resolveBaseColor,
+} from './gleamAccessibility';
 
 export interface GleamLineProps extends AccessibilityProps {
   children?: ReactNode;
@@ -29,6 +34,9 @@ export function GleamLine({
 }: GleamLineProps) {
   const ctx = useContext(GleamContext);
   const register = ctx?.registerLine;
+  const isLoading = ctx?.loading ?? true;
+  const useStaticSkeleton = ctx?.reduceMotion && isLoading;
+  const { accessibilityState, ...restAccessibilityProps } = accessibilityProps;
 
   useLayoutEffect(() => {
     if (!register) return;
@@ -42,6 +50,24 @@ export function GleamLine({
     return (
       <View style={style} testID={testID} {...accessibilityProps}>
         {children}
+      </View>
+    );
+  }
+
+  if (useStaticSkeleton) {
+    return (
+      <View
+        style={[style, { backgroundColor: resolveBaseColor(ctx.baseColor) }]}
+        testID={testID}
+        {...restAccessibilityProps}
+        accessibilityState={gleamAccessibilityState(
+          isLoading,
+          accessibilityState
+        )}
+      >
+        <View style={gleamStyles.hiddenContent} pointerEvents="none">
+          {children}
+        </View>
       </View>
     );
   }
@@ -60,7 +86,11 @@ export function GleamLine({
       onTransitionEnd={onTransitionEnd}
       style={style}
       testID={testID}
-      {...accessibilityProps}
+      {...restAccessibilityProps}
+      accessibilityState={gleamAccessibilityState(
+        isLoading,
+        accessibilityState
+      )}
     >
       {children}
     </NativeGleamView>
