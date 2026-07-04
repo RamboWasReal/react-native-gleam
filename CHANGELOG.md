@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - CI: add missing CocoaPods cache step referenced by the iOS build job
+- CI: always run `pod install` after cache restore (codegen needs fresh `build/generated`)
 
 ## [1.0.6] - 2026-05-15
 
