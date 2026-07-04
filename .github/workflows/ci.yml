@@ -152,7 +152,6 @@ jobs:
           path: |
             example/ios/Pods
             ~/.cocoapods
-            example/vendor/bundle
           key: ${{ runner.os }}-pods-${{ hashFiles('example/ios/Podfile.lock', 'example/Gemfile.lock') }}
           restore-keys: |
             ${{ runner.os }}-pods-
