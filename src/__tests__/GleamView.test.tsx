@@ -782,7 +782,7 @@ describe('GleamView.Line child detection', () => {
     expect(screen.getByTestId('line').props.loading).toBe(true);
   });
 
-  it('detects Lines inside a non-fragment wrapper via registration', () => {
+  it('detects Lines inside a View wrapper on the first render', () => {
     render(
       <GleamView testID="parent" loading={true}>
         <View>
@@ -792,10 +792,73 @@ describe('GleamView.Line child detection', () => {
         </View>
       </GleamView>
     );
-    // registerLine fires in useLayoutEffect, switching to plain View
     const parent = screen.getByTestId('parent');
     expect(parent.props.loading).toBeUndefined();
     expect(screen.getByTestId('line').props.loading).toBe(true);
+  });
+
+  it('detects Lines inside a custom wrapper via registration', () => {
+    function Wrapper({ children }: { children: React.ReactNode }) {
+      return <View>{children}</View>;
+    }
+
+    render(
+      <GleamView testID="parent" loading={true}>
+        <Wrapper>
+          <GleamView.Line testID="line">
+            <Text>Content</Text>
+          </GleamView.Line>
+        </Wrapper>
+      </GleamView>
+    );
+    // Custom wrappers are not scanned; registerLine still flips to Line mode.
+    const parent = screen.getByTestId('parent');
+    expect(parent.props.loading).toBeUndefined();
+    expect(screen.getByTestId('line').props.loading).toBe(true);
+  });
+
+  it('does not treat Lines owned by a nested GleamView as parent Lines', () => {
+    function SkeletonCard({ children }: { children: React.ReactNode }) {
+      return (
+        <GleamView testID="inner" loading={true}>
+          {children}
+        </GleamView>
+      );
+    }
+
+    render(
+      <GleamView testID="outer" loading={true}>
+        <SkeletonCard>
+          <GleamView.Line testID="line">
+            <Text>Title</Text>
+          </GleamView.Line>
+        </SkeletonCard>
+      </GleamView>
+    );
+
+    // Line binds to the inner GleamView. The outer must stay a native shimmer.
+    expect(screen.getByTestId('outer').props.loading).toBe(true);
+    expect(screen.getByTestId('inner').props.loading).toBeUndefined();
+    expect(screen.getByTestId('line').props.loading).toBe(true);
+  });
+
+  it('does not enter Line mode when a custom wrapper keeps Line children unmounted', () => {
+    function Hidden({ children: _children }: { children: React.ReactNode }) {
+      return <View />;
+    }
+
+    render(
+      <GleamView testID="parent" loading={true}>
+        <Hidden>
+          <GleamView.Line testID="line">
+            <Text>Hidden</Text>
+          </GleamView.Line>
+        </Hidden>
+      </GleamView>
+    );
+
+    expect(screen.getByTestId('parent').props.loading).toBe(true);
+    expect(screen.queryByTestId('line')).toBeNull();
   });
 
   it('renders as native GleamView when conditional Line is false', () => {
@@ -1030,11 +1093,7 @@ describe('GleamView.Line ref stability', () => {
     expect(mountCalls).toHaveLength(1);
   });
 
-  it('ref is stable on first render with Lines inside an intermediate wrapper', () => {
-    function Wrapper({ children }: { children: React.ReactNode }) {
-      return <View>{children}</View>;
-    }
-
+  it('ref is stable on first render with Lines inside a View wrapper', () => {
     const refCalls: unknown[] = [];
     const refFn = (node: unknown) => {
       refCalls.push(node);
@@ -1042,11 +1101,11 @@ describe('GleamView.Line ref stability', () => {
 
     render(
       <GleamView ref={refFn} loading={true}>
-        <Wrapper>
+        <View>
           <GleamView.Line>
             <Text>Content</Text>
           </GleamView.Line>
-        </Wrapper>
+        </View>
       </GleamView>
     );
 
