@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Accessibility: set `accessibilityState.busy` automatically while `loading={true}`
+- Reduce Motion: render a static `baseColor` skeleton when the system setting is enabled (no shimmer animation)
+- DEV warning when `loading` is omitted but `children` are present (defaults to `true`)
+- Example app: Reduce Motion banner, wrapped Lines demo, accessibility labels
+
+### Changed
+
+- `GleamView.Line` nested inside `View` or Fragment wrappers is detected on the first render — stable ref, no NativeGleamView→View flip
+
+### Fixed
+
+- CI: add missing CocoaPods cache step referenced by the iOS build job
+- CI: always run `pod install` after cache restore (codegen needs fresh `build/generated`)
+- CI: stop caching `vendor/bundle` (stale gems broke Ruby 3.4 pod install)
+- Example: add `nkf` and `base64` gems for Ruby 3.4 / CocoaPods compatibility
+- `GleamView.Line` detection no longer walks custom component `children` (avoids disabling the parent shimmer when a nested `GleamView` owns those Lines)
+
 ## [1.0.6] - 2026-05-15
 
 ### Fixed

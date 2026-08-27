@@ -1,8 +1,20 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View } from 'react-native';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { View, type ViewProps } from 'react-native';
 import NativeGleamView, { type NativeProps } from './GleamViewNativeComponent';
 import { GleamContext, type GleamContextValue } from './GleamContext';
 import { GleamLine } from './GleamLine';
+import {
+  gleamAccessibilityState,
+  gleamStyles,
+  resolveBaseColor,
+} from './gleamAccessibility';
+import { useReduceMotion } from './useReduceMotion';
 
 export type { NativeProps } from './GleamViewNativeComponent';
 export type { GleamLineProps } from './GleamLine';
@@ -46,20 +58,66 @@ const SHIMMER_KEYS: ReadonlySet<string> = new Set([
   'onTransitionEnd',
 ] as const satisfies ReadonlyArray<keyof NativeProps>);
 
-function hasLineChildren(children: React.ReactNode): boolean {
+// Only walk host wrappers we can inspect without rendering. Custom components
+// may re-parent `children` into a nested GleamView (or not mount them at all);
+// those Lines must bind via context + registerLine, same as on main.
+function isTransparentLineWrapper(type: unknown): boolean {
+  return type === React.Fragment || type === View;
+}
+
+function scanLineChildren(
+  children: React.ReactNode,
+  gleamViewType: unknown
+): boolean {
   let found = false;
   React.Children.forEach(children, (child) => {
     if (found) return;
     if (!React.isValidElement(child)) return;
     if (child.type === GleamLine) {
       found = true;
-    } else if (child.type === React.Fragment) {
-      found = hasLineChildren(
-        (child.props as { children?: React.ReactNode }).children
-      );
+      return;
+    }
+    if (child.type === gleamViewType) {
+      return;
+    }
+    if (!isTransparentLineWrapper(child.type)) {
+      return;
+    }
+    const nested = (child.props as { children?: React.ReactNode }).children;
+    if (nested != null) {
+      found = scanLineChildren(nested, gleamViewType);
     }
   });
   return found;
+}
+
+function StaticSkeleton({
+  ref,
+  loading,
+  baseColor,
+  viewProps,
+  children,
+}: {
+  ref: React.Ref<unknown>;
+  loading: boolean;
+  baseColor?: NativeProps['baseColor'];
+  viewProps: Omit<ViewProps, 'children'>;
+  children: React.ReactNode;
+}) {
+  const { accessibilityState, style, ...restViewProps } = viewProps;
+
+  return (
+    <View
+      ref={ref as any}
+      accessibilityState={gleamAccessibilityState(loading, accessibilityState)}
+      style={[style, { backgroundColor: resolveBaseColor(baseColor) }]}
+      {...restViewProps}
+    >
+      <View style={gleamStyles.hiddenContent} pointerEvents="none">
+        {children}
+      </View>
+    </View>
+  );
 }
 
 // React 19: ref is a regular prop, no forwardRef needed.
@@ -86,6 +144,10 @@ function GleamViewComponent({
     ...viewProps
   } = props;
 
+  const reduceMotion = useReduceMotion();
+  const isLoading = loading ?? true;
+  const useStaticSkeleton = reduceMotion && isLoading;
+
   if (__DEV__) {
     for (const key of Object.keys(viewProps)) {
       if (SHIMMER_KEYS.has(key)) {
@@ -99,17 +161,38 @@ function GleamViewComponent({
 
   const lineCountRef = useRef(0);
   const warnedTransitionRef = useRef(false);
-  const [hasLines, setHasLines] = useState(() => hasLineChildren(children));
+  const warnedDefaultLoadingRef = useRef(false);
+  const hasLinesInTree = useMemo(
+    () => scanLineChildren(children, GleamViewComponent),
+    [children]
+  );
+  const [hasRegisteredLines, setHasRegisteredLines] = useState(false);
+  const hasLines = hasLinesInTree || hasRegisteredLines;
+
+  useEffect(() => {
+    if (
+      __DEV__ &&
+      !warnedDefaultLoadingRef.current &&
+      loading === undefined &&
+      children != null &&
+      !hasLines
+    ) {
+      warnedDefaultLoadingRef.current = true;
+      console.warn(
+        'GleamView: loading defaults to true — children stay hidden until loading={false}.'
+      );
+    }
+  }, [children, hasLines, loading]);
 
   const registerLine = useCallback(() => {
     lineCountRef.current++;
-    setHasLines(true);
+    setHasRegisteredLines(true);
     return () => {
       lineCountRef.current--;
       if (lineCountRef.current === 0) {
         queueMicrotask(() => {
           if (lineCountRef.current === 0) {
-            setHasLines(false);
+            setHasRegisteredLines(false);
             warnedTransitionRef.current = false;
           }
         });
@@ -128,6 +211,7 @@ function GleamViewComponent({
       baseColor,
       highlightColor,
       registerLine,
+      reduceMotion,
     }),
     [
       loading,
@@ -139,6 +223,7 @@ function GleamViewComponent({
       baseColor,
       highlightColor,
       registerLine,
+      reduceMotion,
     ]
   );
 
@@ -156,16 +241,45 @@ function GleamViewComponent({
     }
     return (
       <GleamContext.Provider value={contextValue}>
-        <View ref={nativeRef} {...viewProps}>
+        <View
+          ref={nativeRef}
+          accessibilityState={gleamAccessibilityState(
+            isLoading,
+            viewProps.accessibilityState
+          )}
+          {...viewProps}
+        >
           {children}
         </View>
       </GleamContext.Provider>
     );
   }
 
+  if (useStaticSkeleton) {
+    return (
+      <GleamContext.Provider value={contextValue}>
+        <StaticSkeleton
+          ref={nativeRef}
+          loading={isLoading}
+          baseColor={baseColor}
+          viewProps={viewProps}
+        >
+          {children}
+        </StaticSkeleton>
+      </GleamContext.Provider>
+    );
+  }
+
   return (
     <GleamContext.Provider value={contextValue}>
-      <NativeGleamView ref={nativeRef} {...props}>
+      <NativeGleamView
+        ref={nativeRef}
+        {...props}
+        accessibilityState={gleamAccessibilityState(
+          isLoading,
+          props.accessibilityState
+        )}
+      >
         {children}
       </NativeGleamView>
     </GleamContext.Provider>

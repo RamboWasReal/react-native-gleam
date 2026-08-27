@@ -10,6 +10,7 @@ export interface GleamContextValue {
   intensity: NativeProps['intensity'];
   baseColor: NativeProps['baseColor'];
   highlightColor: NativeProps['highlightColor'];
+  reduceMotion: boolean;
   registerLine: () => () => void;
 }
 

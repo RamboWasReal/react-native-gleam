@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
+  AccessibilityInfo,
   FlatList,
   StyleSheet,
   Text,
@@ -88,9 +89,55 @@ export default function App() {
   const [colorIndex, setColorIndex] = useState(0);
   const [transitionDuration, setTransitionDuration] = useState(300);
   const [transitionType, setTransitionType] = useState(GleamTransition.Fade);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((enabled) => {
+        if (mounted) {
+          setReduceMotion(enabled);
+        }
+      })
+      .catch(() => {});
+
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setReduceMotion
+    );
+
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
+  }, []);
 
   const direction = DIRECTIONS[dirIndex]!.value;
   const colors = COLOR_PRESETS[colorIndex]!;
+
+  const sharedGleamProps = useMemo(
+    () => ({
+      loading,
+      speed,
+      intensity,
+      direction,
+      baseColor: colors.base,
+      highlightColor: colors.highlight,
+      transitionDuration,
+      transitionType,
+    }),
+    [
+      loading,
+      speed,
+      intensity,
+      direction,
+      colors.base,
+      colors.highlight,
+      transitionDuration,
+      transitionType,
+    ]
+  );
 
   const clamp = (v: number, min: number, max: number) =>
     Math.min(max, Math.max(min, v));
@@ -98,6 +145,20 @@ export default function App() {
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       <Text style={styles.title}>react-native-gleam</Text>
+
+      <View
+        style={[
+          styles.callout,
+          reduceMotion ? styles.calloutActive : styles.calloutMuted,
+        ]}
+      >
+        <Text style={styles.calloutTitle}>Reduce Motion</Text>
+        <Text style={styles.calloutText}>
+          {reduceMotion
+            ? 'Enabled — GleamView shows a static baseColor skeleton (no shimmer).'
+            : 'Disabled — toggle in iOS Settings → Accessibility → Motion, or Android Remove animations.'}
+        </Text>
+      </View>
 
       {/* Profile card skeleton */}
       <View style={styles.profileCard}>
@@ -112,6 +173,8 @@ export default function App() {
             transitionDuration={transitionDuration}
             transitionType={transitionType}
             style={styles.avatar}
+            accessibilityLabel="User avatar"
+            accessibilityRole="image"
           >
             <View style={styles.avatarContent}>
               <Text style={styles.avatarText}>JD</Text>
@@ -304,6 +367,43 @@ export default function App() {
         </GleamView>
       </View>
 
+      {/* Lines inside a View wrapper + accessibility labels */}
+      <Text style={styles.sectionLabel}>Wrapped Lines + accessibility</Text>
+      <Text style={styles.sectionHint}>
+        GleamView.Line inside a View wrapper (first-render detection). Each line
+        sets accessibilityLabel; busy is applied automatically while loading.
+      </Text>
+      <View style={styles.lineCard}>
+        <GleamView {...sharedGleamProps}>
+          <View style={styles.wrappedLines}>
+            <GleamView.Line
+              style={styles.lineTitle}
+              delay={0}
+              accessibilityLabel="Loading product name"
+              accessibilityRole="text"
+            >
+              <Text style={styles.lineTitleText}>Premium Plan</Text>
+            </GleamView.Line>
+            <GleamView.Line
+              style={styles.lineSubtitle}
+              delay={120}
+              accessibilityLabel="Loading price"
+              accessibilityRole="text"
+            >
+              <Text style={styles.lineSubtitleText}>$12 / month</Text>
+            </GleamView.Line>
+            <GleamView.Line
+              style={styles.lineBodyShort}
+              delay={240}
+              accessibilityLabel="Loading description"
+              accessibilityRole="text"
+            >
+              <Text style={styles.lineBodyText}>Includes all features.</Text>
+            </GleamView.Line>
+          </View>
+        </GleamView>
+      </View>
+
       {/* Staggered demo */}
       <Text style={styles.sectionLabel}>Staggered</Text>
       <View style={styles.staggered}>
@@ -399,6 +499,31 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 20,
     textAlign: 'center',
+  },
+  callout: {
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+  },
+  calloutActive: {
+    backgroundColor: '#FFF8E6',
+    borderColor: '#F0D48A',
+  },
+  calloutMuted: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E5E5',
+  },
+  calloutTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#444',
+    marginBottom: 4,
+  },
+  calloutText: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 18,
   },
   profileCard: {
     backgroundColor: '#FFFFFF',
@@ -605,6 +730,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#555',
     marginBottom: 8,
+  },
+  sectionHint: {
+    fontSize: 12,
+    color: '#888',
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  wrappedLines: {
+    gap: 8,
   },
   staggered: {
     gap: 6,
