@@ -83,7 +83,7 @@ When `loading={true}`, each `GleamView.Line` renders its own shimmer bar, sized 
 
 Lines inherit `loading`, `speed`, `direction`, `baseColor`, `highlightColor`, `intensity`, `transitionDuration`, and `transitionType` from the parent. `delay` and `onTransitionEnd` are per-line.
 
-For best performance, place `GleamView.Line` as direct children of `GleamView` (or inside fragments). Lines nested inside intermediate wrappers (e.g., `<View>`) are detected automatically on the first render.
+For best performance, place `GleamView.Line` as direct children of `GleamView` (or inside fragments). Lines nested inside `<View>` or fragments are detected on the first render. Custom wrappers still work; they register after mount.
 
 Every `GleamView` provides context to its subtree. A `GleamView.Line` always binds to its nearest `GleamView` ancestor — nested `GleamView` components each control their own Lines independently.
 

@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- `GleamView.Line` nested inside intermediate wrappers (e.g. `<View>`) is detected on the first render — stable ref, no NativeGleamView→View flip
+- `GleamView.Line` nested inside `View` or Fragment wrappers is detected on the first render — stable ref, no NativeGleamView→View flip
 
 ### Fixed
 
@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI: always run `pod install` after cache restore (codegen needs fresh `build/generated`)
 - CI: stop caching `vendor/bundle` (stale gems broke Ruby 3.4 pod install)
 - Example: add `nkf` and `base64` gems for Ruby 3.4 / CocoaPods compatibility
+- `GleamView.Line` detection no longer walks custom component `children` (avoids disabling the parent shimmer when a nested `GleamView` owns those Lines)
 
 ## [1.0.6] - 2026-05-15
 

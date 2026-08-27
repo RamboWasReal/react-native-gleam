@@ -58,6 +58,13 @@ const SHIMMER_KEYS: ReadonlySet<string> = new Set([
   'onTransitionEnd',
 ] as const satisfies ReadonlyArray<keyof NativeProps>);
 
+// Only walk host wrappers we can inspect without rendering. Custom components
+// may re-parent `children` into a nested GleamView (or not mount them at all);
+// those Lines must bind via context + registerLine, same as on main.
+function isTransparentLineWrapper(type: unknown): boolean {
+  return type === React.Fragment || type === View;
+}
+
 function scanLineChildren(
   children: React.ReactNode,
   gleamViewType: unknown
@@ -71,6 +78,9 @@ function scanLineChildren(
       return;
     }
     if (child.type === gleamViewType) {
+      return;
+    }
+    if (!isTransparentLineWrapper(child.type)) {
       return;
     }
     const nested = (child.props as { children?: React.ReactNode }).children;
