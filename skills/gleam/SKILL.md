@@ -82,8 +82,10 @@ import { GleamView } from 'react-native-gleam';
 Key rules:
 - `GleamView` wraps content — no conditional rendering needed. Children are hidden when `loading={true}` and shown when `loading={false}`
 - Lines inherit shimmer props from parent. `delay` and `onTransitionEnd` are per-line
-- Place Lines as direct children or inside fragments
+- Place Lines as direct children of `GleamView`, or inside `<View>` / fragments — those are detected on the first render. Custom wrappers still work; they register after mount
 - Use `onTransitionEnd` on individual Lines, not the parent
+- While `loading={true}`, `GleamView` and `GleamView.Line` set `accessibilityState.busy` (merged with any `accessibilityState` you pass)
+- When the system Reduce Motion setting is on, shimmer is a static `baseColor` placeholder — no animation
 - In `FlatList`/`VirtualizedList` cells, keep the wrapper pattern and make `loading` reflect the absence of stable content, not background refetching. For example, with server-state data use `loading={isPending && !data}` instead of `loading={isFetching}` so recycled cells do not re-enable shimmer over already loaded content.
 - When adding or debugging list usage, validate with the example app's `FlatList recycling` section by scrolling enough to recycle cells, toggling loading, and confirming loaded content remains visible after cells reattach.
 
@@ -111,6 +113,8 @@ Key rules:
 | `style` | `ViewStyle` | — | Size/shape of shimmer bar |
 | `delay` | `number` | `0` | Phase offset for this line |
 | `onTransitionEnd` | `function` | — | Per-line transition callback |
+
+Accessibility props (`accessibilityLabel`, `accessibilityRole`, etc.) are accepted on Lines. Shimmer props (`loading`, `speed`, `direction`, …) are inherited from the parent `GleamView`.
 
 ### Enums
 

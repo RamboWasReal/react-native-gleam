@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
 ## [1.1.0] - 2026-08-27
 
 ### Added
@@ -24,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI: always run `pod install` after cache restore (codegen needs fresh `build/generated`)
 - CI: stop caching `vendor/bundle` (stale gems broke Ruby 3.4 pod install)
 - Example: add `nkf` and `base64` gems for Ruby 3.4 / CocoaPods compatibility
-- `GleamView.Line` detection no longer walks custom component `children` (avoids disabling the parent shimmer when a nested `GleamView` owns those Lines)
+- `GleamView.Line` detection no longer walks custom component `children` (avoids disabling the parent shimmer when a nested `GleamView` owns those Lines) (#8)
 
 ## [1.0.6] - 2026-05-15
 
@@ -97,3 +99,13 @@ First stable release.
 - Requires React 19+ and React Native 0.78+
 - The shimmer overlay supports uniform `borderRadius` only — per-corner radii are not applied to the shimmer
 - When `GleamView.Line` children are present, the parent renders as a plain `View`. Use `onTransitionEnd` on individual lines, not the parent.
+
+[Unreleased]: https://github.com/RamboWasReal/react-native-gleam/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/RamboWasReal/react-native-gleam/compare/v1.0.6...v1.1.0
+[1.0.6]: https://github.com/RamboWasReal/react-native-gleam/compare/v1.0.5...v1.0.6
+[1.0.5]: https://github.com/RamboWasReal/react-native-gleam/compare/v1.0.4...v1.0.5
+[1.0.4]: https://github.com/RamboWasReal/react-native-gleam/compare/v1.0.3...v1.0.4
+[1.0.3]: https://github.com/RamboWasReal/react-native-gleam/compare/v1.0.2...v1.0.3
+[1.0.2]: https://github.com/RamboWasReal/react-native-gleam/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/RamboWasReal/react-native-gleam/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/RamboWasReal/react-native-gleam/releases/tag/v1.0.0
