@@ -24,7 +24,7 @@ export declare enum GleamTransition {
 }
 declare function GleamViewComponent({ ref, ...props }: NativeProps & {
     ref?: React.Ref<unknown>;
-}): import("react/jsx-runtime").JSX.Element;
+}): React.JSX.Element;
 declare namespace GleamViewComponent {
     var displayName: string;
 }

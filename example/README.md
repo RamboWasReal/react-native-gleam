@@ -1,4 +1,17 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+This app exercises the local Gleam library with React Native 0.88.1 and React 19.3.1.
+
+Use the Node version in the repository's `.nvmrc` and install dependencies with
+`yarn` from the repository root. The example requires Node 22.13+ on the 22.x
+line, 24.3+ on the 24.x line, or 26+. Android builds use JDK 17, Android SDK 37,
+and Build Tools 37.0.0. The iOS app uses the `SceneDelegate` lifecycle, including
+when built with Xcode 27.
+
+From the repository root, run `yarn example start`, then `yarn example ios` or
+`yarn example android`. For iOS dependencies, run `bundle install` followed by
+`bundle exec pod install --project-directory=ios` from `example/`.
+
+The example's toolchain versions do not change the library's React Native 0.78+
+peer requirement.
 
 # Getting Started
 

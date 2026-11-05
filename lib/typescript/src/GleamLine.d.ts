@@ -11,5 +11,5 @@ export interface GleamLineProps extends AccessibilityProps {
     /** Called when this line's transition completes or is interrupted. */
     onTransitionEnd?: NativeProps['onTransitionEnd'];
 }
-export declare function GleamLine({ children, style, testID, delay, onTransitionEnd, ...accessibilityProps }: GleamLineProps): import("react/jsx-runtime").JSX.Element;
+export declare function GleamLine({ children, style, testID, delay, onTransitionEnd, ...accessibilityProps }: GleamLineProps): import("react").JSX.Element;
 //# sourceMappingURL=GleamLine.d.ts.map
