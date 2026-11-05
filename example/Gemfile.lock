@@ -1,7 +1,7 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    CFPropertyList (3.0.9)
+    CFPropertyList (3.0.8)
     activesupport (7.2.3)
       base64
       benchmark (>= 0.3)
@@ -82,10 +82,10 @@ GEM
     minitest (5.27.0)
     molinillo (0.8.0)
     mutex_m (0.3.0)
-    nkf (0.3.0)
     nanaimo (0.3.0)
     nap (1.1.0)
     netrc (0.11.0)
+    nkf (0.3.0)
     public_suffix (4.0.7)
     rexml (3.4.4)
     ruby-macho (2.5.1)

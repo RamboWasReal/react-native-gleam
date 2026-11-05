@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-11-05
+
+### Fixed
+
+- Restore React Native 0.78 Codegen imports and public type compatibility while retaining support for the Strict TypeScript API in newer React Native versions.
+- Align the CocoaPods source tag with the repository's `v{version}` release tags.
+
+### Changed
+
+- Update the development environment and example app to React Native 0.88.1 and React 19.3.1, including the Jest preset, Android build configuration, and iOS `SceneDelegate` lifecycle.
+- Refresh generated library artifacts and dependency lockfiles. The library still requires React 19+ and React Native 0.78+ with Fabric.
+
 ## [1.1.0] - 2026-08-27
 
 ### Added
@@ -100,7 +112,8 @@ First stable release.
 - The shimmer overlay supports uniform `borderRadius` only — per-corner radii are not applied to the shimmer
 - When `GleamView.Line` children are present, the parent renders as a plain `View`. Use `onTransitionEnd` on individual lines, not the parent.
 
-[Unreleased]: https://github.com/RamboWasReal/react-native-gleam/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/RamboWasReal/react-native-gleam/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/RamboWasReal/react-native-gleam/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/RamboWasReal/react-native-gleam/compare/v1.0.6...v1.1.0
 [1.0.6]: https://github.com/RamboWasReal/react-native-gleam/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/RamboWasReal/react-native-gleam/compare/v1.0.4...v1.0.5
